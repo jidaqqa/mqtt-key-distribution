@@ -1,3 +1,4 @@
+import logging
 import socket
 import threading
 import ssl
@@ -7,6 +8,11 @@ from util.exceptions import MQTTMessageNotSupportedException
 from util.exceptions import IncorrectProtocolOrderException
 from util.client_manager import *
 import util.enums as enums
+import getmac
+from util.hci_rssi import RSSI
+from util.bluetooth_tech import BluetoothTech
+import os
+
 
 ALLOWED_CONNECTIONS = 10
 
@@ -60,6 +66,34 @@ class ClientThread(threading.Thread):
         connack_msg = MQTTPacketManager.prepare_connack(parsed_msg)
         self.client_socket.send(connack_msg)
         logger.logging.info(f"Sent CONNACK to client {parsed_msg['client_id']}.")
+
+        mac_adress = getmac.get_mac_address(ip=str(self.client_address[0]))
+        bt_rssi = RSSI(str(mac_adress))
+        current_rssi = bt_rssi.get_rssi()
+        power_ref = bt_rssi.get_average_rssi(3)
+        stdev_power = bt_rssi.get_rssi_stdev(10)
+        path_loss_exp = 2.0
+        d_ref = 1.0
+        d_est, d_min, d_max = bt_rssi.estimate_distance(current_rssi, (d_ref, power_ref, path_loss_exp, stdev_power))
+        logger.logging.info("Current RSSI: ", current_rssi)
+        logger.logging.info("Power Reference at 1m: ", power_ref)
+        logger.logging.info("Standard Deviation of current power: ", stdev_power)
+        logger.logging.info("Estimated distance in meters is: ", d_est)
+        logger.logging.info("Distance uncertainty range in meters is: ", (d_min, d_max))
+        key_file_path = os.path.dirname(os.path.realpath(__file__)) + "/broker_key.config"
+        keys = dict()
+        cipher_key = None
+        with open(key_file_path) as f:
+            logger.logging.debug(f"\tReading key from %s" % key_file_path)
+            for l in f:
+                line = l.strip()
+                if not line.startswith('#'):  # Allow comments in files
+                    key_name, key = line.split(sep=":", maxsplit=1)
+                    keys[key_name] = key
+
+        if "current_key" in keys.keys():
+            cipher_key = keys["current_key"]
+        BluetoothTech(mac_adress).sendmessage(cipher_key)
 
     def handle_publish(self, parsed_msg):
         """

@@ -8,6 +8,7 @@ import warnings
 import os
 import uvloop
 import signal
+from util.bluetooth_tech import BluetoothTech
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 STOP = asyncio.Event()
@@ -106,9 +107,21 @@ async def main(args):
                 logging.info(f"Message {i} sent without Multilateral Security")
                 client.publish(args.topic, args.message + f" {i}", qos=0)
     else:
-        logging.info(f"Publishing '{args.topic}:{args.message}', Multilateral Security: {'on' if args.multilateral else 'off'}")
-        client.publish(args.topic, args.message, qos=0)
-
+        key_file_path = os.path.dirname(os.path.realpath(__file__)) + "/client_key.config"
+        keys = dict()
+        with open(key_file_path) as f:
+            logging.info("Reading key from %s" % key_file_path)
+            for l in f:
+                line = l.strip()
+                if not line.startswith('#'):  # Allow comments in files
+                    topic, key = line.split(sep=":", maxsplit=1)
+                    keys[topic] = key
+        if bool(keys):
+            logging.info(f"Publishing '{args.topic}:{args.message}', Multilateral Security: {'on' if args.multilateral else 'off'}")
+            client.publish(args.topic, args.message, qos=0)
+        else:
+            logging.info("Reading key from %s failed or does not exist" % key_file_path)
+            BluetoothTech.receivemessages()
     await STOP.wait()
     try:
         await client.disconnect(session_expiry_interval=0)
@@ -119,7 +132,7 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-    HOSTNAME = "MindFlayer.fritz.box"
+    HOSTNAME = "localhost"
     PORT = 1883
     CLIENT_ID = str(random.randint(0,50000))
 
@@ -158,7 +171,8 @@ if __name__ == '__main__':
         loop = asyncio.get_event_loop()
         loop.add_signal_handler(signal.SIGINT, ask_exit)
         loop.add_signal_handler(signal.SIGTERM, ask_exit)
-
         loop.run_until_complete(main(args))
+
     except (KeyboardInterrupt, RuntimeError):
         logging.info("Closing the client.")
+
