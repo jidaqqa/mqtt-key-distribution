@@ -1,4 +1,7 @@
 import asyncio
+import subprocess
+import rssi
+import yaml
 from gmqtt import Client as MQTTClient
 import argparse
 import random
@@ -74,6 +77,11 @@ async def main(args):
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
 
+    with open("./mode.yml", 'r') as ymlfile:
+        cfg = yaml.safe_load(ymlfile)
+
+    mode = cfg['mode']
+
     # if both, cert and key, are specified, try to establish TLS connection to broker
     if args.cert and args.key:
         try:
@@ -88,6 +96,18 @@ async def main(args):
 
     # if both are not specified, then connect via insecure channel
     elif not args.cert and not args.key:
+        if mode == "BL":
+            temp = subprocess.check_output(['hcitool', 'dev'])
+            device_info = temp.decode('utf-8').split()
+            client.set_auth_credentials(device_info[2])
+        elif mode == "WIFI":
+            output = subprocess.check_output(['iwgetid'])
+            interface = output.decode().split()[0]
+            APSSID = output.decode().split()[1]
+            rssi_scanner = rssi.RSSI_Scan(interface)
+            ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
+            logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
+            client.set_auth_credentials(ap_info[0]['signal'])
         await client.connect(host=args.host, port=args.port)
 
     # if only one of them is specified, print error and exit
@@ -121,7 +141,10 @@ async def main(args):
             client.publish(args.topic, args.message, qos=0)
         else:
             logging.info("Reading key from %s failed or does not exist" % key_file_path)
-            BluetoothTech.receivemessages()
+            if mode == "BL":
+                BluetoothTech.receivemessages()
+            elif mode == "WIFI":
+                logging.info("WIFI Mode")
     await STOP.wait()
     try:
         await client.disconnect(session_expiry_interval=0)
@@ -132,7 +155,7 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-    HOSTNAME = "localhost"
+    HOSTNAME = "172.18.0.103"
     PORT = 1883
     CLIENT_ID = str(random.randint(0,50000))
 

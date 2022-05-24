@@ -1,18 +1,19 @@
 import logging
 import socket
+import subprocess
 import threading
 import ssl
+
+import yaml
+
+from util.bluetooth_tech import BluetoothTech
 from util.mqtt_packet_manager import MQTTPacketManager
 import util.logger as logger
 from util.exceptions import MQTTMessageNotSupportedException
-from util.exceptions import IncorrectProtocolOrderException
 from util.client_manager import *
 import util.enums as enums
-import getmac
-from util.hci_rssi import RSSI
-from util.bluetooth_tech import BluetoothTech
+from util import hci_rssi
 import os
-
 
 ALLOWED_CONNECTIONS = 10
 
@@ -21,7 +22,9 @@ class ClientThread(threading.Thread):
     """
     Handles the TCP sockets with the clients
     """
-    def __init__(self, client_socket, client_address, listener, subscription_manager, client_manager, multilateral, debug, tls=0):
+
+    def __init__(self, client_socket, client_address, listener, subscription_manager, client_manager, multilateral,
+                 debug, tls=0):
         super().__init__()
         self.client_socket = client_socket
         self.client_address = client_address
@@ -40,7 +43,7 @@ class ClientThread(threading.Thread):
         return self._running
 
     @running.setter
-    def running(self,value):
+    def running(self, value):
         self._running = value
 
     def run(self):
@@ -55,45 +58,61 @@ class ClientThread(threading.Thread):
         in the ClientManager and set the ClientID. Afterwards send a CONNACK msg back to the client.
         :param parsed_msg: a parsed version of the received message
         """
+
         try:
             self._client_manager.add_status(self.client_socket, self.client_address, enums.Status.CONN_RECV)
             self._client_manager.add_user_property(self.client_socket, self.client_address, parsed_msg['properties'])
-            self._client_manager.add_user_property(self.client_socket, self.client_address, {enums.Properties.Version: parsed_msg['version']})
+            self._client_manager.add_user_property(self.client_socket, self.client_address,
+                                                   {enums.Properties.Version: parsed_msg['version']})
             self.client_id = parsed_msg['client_id']
+
+            connack_msg = MQTTPacketManager.prepare_connack(parsed_msg)
+            self.client_socket.send(connack_msg)
+            logger.logging.info(f"Sent CONNACK to client {parsed_msg['client_id']}.")
+
+            with open("./mode.yml", 'r') as ymlfile:
+                cfg = yaml.safe_load(ymlfile)
+
+            mode = cfg['mode']
+            d_ref = cfg['d_ref']
+            power_ref = cfg['power_ref']
+            path_loss_exp = cfg['power_ref']
+
+            if mode == "BL":
+                mac_address = parsed_msg['username']
+                bt_rssi = hci_rssi.RSSI(mac_address)
+                current_rssi = bt_rssi.get_rssi()
+                stdev_power = bt_rssi.get_rssi_stdev(3)
+                d_est, d_min, d_max = bt_rssi.estimate_distance(current_rssi,
+                                                                (d_ref, power_ref, path_loss_exp, stdev_power))
+                logging.info("Current RSSI: " + str(current_rssi))
+                logging.info("Power Reference at 1m: " + str(power_ref))
+                logging.info("Standard Deviation of current power: " + str(stdev_power))
+                logging.info(f"Estimated distance in meters is: {d_est} ")
+                logging.info(f"Distance uncertainty range in meters is: {(d_min, d_max)}")
+
+                try:
+                    key_file_path = "./broker_key.config"
+                    keys = dict()
+                    with open(key_file_path) as f:
+                        logging.info("Reading key from %s" % key_file_path)
+                        for l in f:
+                            line = l.strip()
+                            if not line.startswith('#'):  # Allow comments in files
+                                key_type, key = line.split(sep=":", maxsplit=1)
+                                keys[key_type] = key
+                    if bool(keys):
+                        logging.info(f"Key Found {keys['current_key']}")
+                        # BluetoothTech(mac_address).sendmessage(keys["current_key"])
+                except IOError as e:
+                    logging.info(e)
+
+            elif mode == "WIFI":
+                rssi_value = float(parsed_msg['username'])
+                logging.info(f"Received WIFI RSSI: {rssi_value}")
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()
-        connack_msg = MQTTPacketManager.prepare_connack(parsed_msg)
-        self.client_socket.send(connack_msg)
-        logger.logging.info(f"Sent CONNACK to client {parsed_msg['client_id']}.")
-
-        mac_adress = getmac.get_mac_address(ip=str(self.client_address[0]))
-        bt_rssi = RSSI(str(mac_adress))
-        current_rssi = bt_rssi.get_rssi()
-        power_ref = bt_rssi.get_average_rssi(3)
-        stdev_power = bt_rssi.get_rssi_stdev(10)
-        path_loss_exp = 2.0
-        d_ref = 1.0
-        d_est, d_min, d_max = bt_rssi.estimate_distance(current_rssi, (d_ref, power_ref, path_loss_exp, stdev_power))
-        logger.logging.info("Current RSSI: ", current_rssi)
-        logger.logging.info("Power Reference at 1m: ", power_ref)
-        logger.logging.info("Standard Deviation of current power: ", stdev_power)
-        logger.logging.info("Estimated distance in meters is: ", d_est)
-        logger.logging.info("Distance uncertainty range in meters is: ", (d_min, d_max))
-        key_file_path = os.path.dirname(os.path.realpath(__file__)) + "/broker_key.config"
-        keys = dict()
-        cipher_key = None
-        with open(key_file_path) as f:
-            logger.logging.debug(f"\tReading key from %s" % key_file_path)
-            for l in f:
-                line = l.strip()
-                if not line.startswith('#'):  # Allow comments in files
-                    key_name, key = line.split(sep=":", maxsplit=1)
-                    keys[key_name] = key
-
-        if "current_key" in keys.keys():
-            cipher_key = keys["current_key"]
-        BluetoothTech(mac_adress).sendmessage(cipher_key)
 
     def handle_publish(self, parsed_msg):
         """
@@ -107,7 +126,8 @@ class ClientThread(threading.Thread):
         3) Else: every subscriber receives the msg
         :param parsed_msg: a parsed version of the received message
         """
-        if self._client_manager.get_client_status(self.client_socket, self.client_address) in [enums.Status.CONN_RECV, enums.Status.PUB_RECV]:
+        if self._client_manager.get_client_status(self.client_socket, self.client_address) in [enums.Status.CONN_RECV,
+                                                                                               enums.Status.PUB_RECV]:
             self._client_manager.add_status(self.client_socket, self.client_address, enums.Status.PUB_RECV)
             topic = parsed_msg['topic']
             message_multilateral = self._determine_message_multilateral(parsed_msg)
@@ -116,23 +136,31 @@ class ClientThread(threading.Thread):
                 # if received on TLS listener then check for multilateral security. Subscriber must be TLS as well
                 if self._tls and (self._multilateral or client_multilateral or message_multilateral):
                     if sub['tls']:
-                        logger.logging.info(f"Sent TLS-Enforced publish message '{parsed_msg['payload']}' in '{topic}' to Client {sub['client_id']}")
+                        logger.logging.info(
+                            f"Sent TLS-Enforced publish message '{parsed_msg['payload']}' in '{topic}' to Client {sub['client_id']}")
                         sub['client_socket'].send(parsed_msg['raw_packet'])
                     else:
-                        logger.log_multilateral(self._multilateral, client_multilateral, message_multilateral, sub['multilateral'], parsed_msg['payload'], topic, self.client_id, sub['client_id'], 'sub')
+                        logger.log_multilateral(self._multilateral, client_multilateral, message_multilateral,
+                                                sub['multilateral'], parsed_msg['payload'], topic, self.client_id,
+                                                sub['client_id'], 'sub')
                 # if received on Non-TLS Listener then check for multilateral and TLS of subscribers before sending. They should not receive it.
                 elif not self._tls and sub['multilateral']:
                     if not sub['tls']:
-                        logger.logging.info(f"Sent publish message '{parsed_msg['payload']}' in '{topic}' to Client {sub['client_id']}")
+                        logger.logging.info(
+                            f"Sent publish message '{parsed_msg['payload']}' in '{topic}' to Client {sub['client_id']}")
                         sub["client_socket"].send(parsed_msg['raw_packet'])
                     else:
-                        logger.log_multilateral(self._multilateral, client_multilateral, message_multilateral, sub['multilateral'], parsed_msg['payload'], topic, self.client_id, sub['client_id'], 'pub')
+                        logger.log_multilateral(self._multilateral, client_multilateral, message_multilateral,
+                                                sub['multilateral'], parsed_msg['payload'], topic, self.client_id,
+                                                sub['client_id'], 'pub')
                 # just send to everybody
                 else:
-                    logger.logging.info(f"Sent publish message '{parsed_msg['payload']}' in '{topic}' to Client {sub['client_id']}")
+                    logger.logging.info(
+                        f"Sent publish message '{parsed_msg['payload']}' in '{topic}' to Client {sub['client_id']}")
                     sub["client_socket"].send(parsed_msg['raw_packet'])
         else:
-            raise IncorrectProtocolOrderException(f"Received PUBLISH message from client {self.client_address} before CONNECT. Abort!")
+            raise IncorrectProtocolOrderException(
+                f"Received PUBLISH message from client {self.client_address} before CONNECT. Abort!")
 
     def handle_subscribe(self, parsed_msg):
         """
@@ -140,13 +168,15 @@ class ClientThread(threading.Thread):
         client status to SUB_RECV. Add the client to the subscriber list and send a PUBACK message back to the client.
         :param parsed_msg: a parsed version of the received message
         """
-        if self._client_manager.get_client_status(self.client_socket, self.client_address) in [enums.Status.CONN_RECV, enums.Status.SUB_RECV]:
+        if self._client_manager.get_client_status(self.client_socket, self.client_address) in [enums.Status.CONN_RECV,
+                                                                                               enums.Status.SUB_RECV]:
             self._client_manager.add_status(self.client_socket, self.client_address, enums.Status.SUB_RECV)
             topic = parsed_msg['topic']
             client_multilateral = self._determine_client_multilateral()
             topic_multilateral = self._determine_message_multilateral(parsed_msg)
             self._subscription_manager.add_subscriber(self.client_socket, self.client_address, topic, self._tls,
-                                                      (self._multilateral or client_multilateral or topic_multilateral), self.client_id)
+                                                      (self._multilateral or client_multilateral or topic_multilateral),
+                                                      self.client_id)
             logger.logging.info(
                 f"- Client {self.client_id} subscribed successfully to topic: '{topic}' on port {self.listener.port}")
 
@@ -190,24 +220,31 @@ class ClientThread(threading.Thread):
                 if len(msg) > 0:
                     if logger.DEBUG:
                         logger.logging.debug(f"Received raw message on Port {self.listener.port}: {msg}")
-                    parsed_msg = MQTTPacketManager.parse_packet(msg, self.client_socket, self.client_address, self._client_manager)
+                    parsed_msg = MQTTPacketManager.parse_packet(msg, self.client_socket, self.client_address,
+                                                                self._client_manager)
                     if parsed_msg['identifier'] == enums.PacketIdentifer.CONNECT:
-                        logger.logging.info(f"Received CONNECT message from Client {parsed_msg['client_id']} on Port {self.listener.port}: {msg}")
+                        logger.logging.info(
+                            f"Received CONNECT message from Client {parsed_msg['client_id']} on Port {self.listener.port}: {msg}")
                         self.handle_connect(parsed_msg)
                     elif parsed_msg['identifier'] == enums.PacketIdentifer.PUBLISH:
-                        logger.logging.info(f"Received PUBLISH message from Client {self.client_id} on Port {self.listener.port}: {msg}")
+                        logger.logging.info(
+                            f"Received PUBLISH message from Client {self.client_id} on Port {self.listener.port}: {msg}")
                         self.handle_publish(parsed_msg)
                     elif parsed_msg['identifier'] == enums.PacketIdentifer.SUBSCRIBE:
-                        logger.logging.info(f"Received SUBSCRIBE message from Client {self.client_id} on Port {self.listener.port}: {msg}")
+                        logger.logging.info(
+                            f"Received SUBSCRIBE message from Client {self.client_id} on Port {self.listener.port}: {msg}")
                         self.handle_subscribe(parsed_msg)
                     elif parsed_msg['identifier'] == enums.PacketIdentifer.PINGREQ:
-                        logger.logging.info(f"Received PINGREQ message from Client {self.client_id} on Port {self.listener.port}: {msg}")
+                        logger.logging.info(
+                            f"Received PINGREQ message from Client {self.client_id} on Port {self.listener.port}: {msg}")
                         self.handle_pingreq(parsed_msg)
                     elif parsed_msg['identifier'] == enums.PacketIdentifer.DISCONNECT:
-                        logger.logging.info(f"Received DISCONNECT message from Client {self.client_id} on Port {self.listener.port}: {msg}")
+                        logger.logging.info(
+                            f"Received DISCONNECT message from Client {self.client_id} on Port {self.listener.port}: {msg}")
                         self.handle_disconnect(parsed_msg)
                     else:
-                        raise MQTTMessageNotSupportedException(f'Client {self.client_address} sent a message with identifier: `{parsed_msg["identifier"]}`. Not supported, therefore ignored!')
+                        raise MQTTMessageNotSupportedException(
+                            f'Client {self.client_address} sent a message with identifier: `{parsed_msg["identifier"]}`. Not supported, therefore ignored!')
         except OSError:
             pass
         except MQTTMessageNotSupportedException as e:
@@ -215,7 +252,6 @@ class ClientThread(threading.Thread):
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()
-
 
     def _determine_message_multilateral(self, parsed_msg):
         """
@@ -273,6 +309,7 @@ class Listener(object):
     """
     MQTT Listener. No security mechanisms in place.
     """
+
     def __init__(self, config, subscription_manager, client_manager, ip, debug=0):
         """
         Constructor for the MQTT Listener
@@ -306,7 +343,8 @@ class Listener(object):
             try:
                 client_socket, client_address = self.sock.accept()
                 if client_socket and client_address:
-                    client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager, self._client_manager, self._multilateral, self.debug)
+                    client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager,
+                                                 self._client_manager, self._multilateral, self.debug)
                     self.open_sockets[client_address] = client_thread
                     client_thread.setDaemon(True)
                     client_thread.start()
@@ -321,7 +359,7 @@ class Listener(object):
         if len(self.open_sockets) != 0:
             logger.logging.info("--- Closing open client connections")
             for index, client_thread in enumerate(self.open_sockets):
-                logger.logging.info(f"\t --- Connection {index+1}/{len(self.open_sockets)} closed")
+                logger.logging.info(f"\t --- Connection {index + 1}/{len(self.open_sockets)} closed")
             logger.logging.info("--- All open client connections were successfully closed.")
         self.sock.close()
 
@@ -351,6 +389,7 @@ class TLSListener(Listener):
     TLS MQTT Listener. Handles the TLS connection of clients and then starts a @ClientThread for each connection, that
     then handles the message handling.
     """
+
     def __init__(self, config, subscription_manager, client_manager, ip, debug=0):
         super().__init__(config, subscription_manager, client_manager, ip, debug)
         self._cacert = config.cacert
@@ -380,12 +419,14 @@ class TLSListener(Listener):
                 try:
                     connstream = self.context.wrap_socket(client_socket, server_side=True)
                     if client_socket and client_address and connstream:
-                        client_thread = ClientThread(connstream, client_address, self, self._subscription_manager, self._client_manager, self._multilateral, self.debug, tls=1)
+                        client_thread = ClientThread(connstream, client_address, self, self._subscription_manager,
+                                                     self._client_manager, self._multilateral, self.debug, tls=1)
                         self.open_sockets[client_address] = client_thread
                         client_thread.setDaemon(True)
                         client_thread.start()
                 except ssl.SSLError:
-                    logger.logging.error(f"Client {client_address} tried to connect to Port {self._port} (=TLS) via insecure channel. Connection refused.")
+                    logger.logging.error(
+                        f"Client {client_address} tried to connect to Port {self._port} (=TLS) via insecure channel. Connection refused.")
                     client_socket.close()
             except ConnectionAbortedError:
                 logger.logging.info("Closed socket connection of TLS Listener.")

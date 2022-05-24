@@ -1,14 +1,15 @@
+import logging
 import subprocess
 import time
 import statistics
 import numpy as np
 import bluetooth
 
+
 class RSSI:
 
     def __init__(self, addr):
         self.addr = addr
-
 
     def get_rssi(self):
         bt_sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
@@ -17,6 +18,7 @@ class RSSI:
         temp = subprocess.check_output([cmd, 'rssi', self.addr])
         output_rssi = temp.decode('utf-8').split()
         rssi_value = float(output_rssi[3])
+        bt_sock.close()
         return rssi_value
 
     def get_average_rssi(self, number_of_loops):
@@ -56,12 +58,6 @@ class RSSI:
             params = (1.0, -55.0, 2.0, 2.5)
             # the above values are arbitrarily chosen "default values"
             # should be changed based on measurements
-
-        cmd = 'hcitool'
-        temp = subprocess.check_output([cmd, 'rssi', self.addr])
-        output_rssi = temp.decode('utf-8').split()
-        rssi_value = float(output_rssi[3])
-
         d_ref = params[0]  # reference distance
         power_ref = params[1]  # mean received power at reference distance
         path_loss_exp = params[2]  # path loss exponent

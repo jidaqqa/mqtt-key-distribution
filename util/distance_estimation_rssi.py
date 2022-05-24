@@ -1,5 +1,6 @@
 import numpy as np
 import hci_rssi
+import subprocess
 
 
 def estimate_distance(power_received, params=None):
@@ -40,7 +41,8 @@ def estimate_distance(power_received, params=None):
 
 # example usage, for testing
 if __name__ == '__main__':
-    bt_rssi = hci_rssi.RSSI('30:50:75:D9:15:B5')
+
+    bt_rssi = hci_rssi.RSSI()
     current_rssi = bt_rssi.get_rssi()
     power_ref = bt_rssi.get_average_rssi(3)
     stdev_power = bt_rssi.get_rssi_stdev(10)
