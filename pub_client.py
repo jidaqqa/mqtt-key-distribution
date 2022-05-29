@@ -82,6 +82,10 @@ async def main(args):
 
     mode = cfg['mode']
 
+    key_file_path = os.path.dirname(os.path.realpath(__file__)) + "/client_key.yml"
+    with open(key_file_path, 'r') as ymlfile:
+        key_cfg = yaml.safe_load(ymlfile)
+
     # if both, cert and key, are specified, try to establish TLS connection to broker
     if args.cert and args.key:
         try:
@@ -96,11 +100,11 @@ async def main(args):
 
     # if both are not specified, then connect via insecure channel
     elif not args.cert and not args.key:
-        if mode == "BL":
+        if mode == "BL" and key_cfg['current_key'] == "":
             temp = subprocess.check_output(['hcitool', 'dev'])
             device_info = temp.decode('utf-8').split()
             client.set_auth_credentials(device_info[2])
-        elif mode == "WIFI":
+        elif mode == "WIFI" and key_cfg['current_key'] == "":
             output = subprocess.check_output(['iwgetid'])
             interface = output.decode().split()[0]
             APSSID = output.decode().split()[1]
@@ -127,22 +131,17 @@ async def main(args):
                 logging.info(f"Message {i} sent without Multilateral Security")
                 client.publish(args.topic, args.message + f" {i}", qos=0)
     else:
-        key_file_path = os.path.dirname(os.path.realpath(__file__)) + "/client_key.config"
-        keys = dict()
-        with open(key_file_path) as f:
-            logging.info("Reading key from %s" % key_file_path)
-            for l in f:
-                line = l.strip()
-                if not line.startswith('#'):  # Allow comments in files
-                    topic, key = line.split(sep=":", maxsplit=1)
-                    keys[topic] = key
-        if bool(keys):
+        if key_cfg['current_key'] != "":
             logging.info(f"Publishing '{args.topic}:{args.message}', Multilateral Security: {'on' if args.multilateral else 'off'}")
             client.publish(args.topic, args.message, qos=0)
         else:
             logging.info("Reading key from %s failed or does not exist" % key_file_path)
             if mode == "BL":
-                BluetoothTech.receivemessages()
+                data = BluetoothTech.receivemessages()
+                key_cfg['current_key'] = data
+                logging.info(key_cfg["current_key"])
+                with open(key_file_path, 'w') as ymlfile:
+                    yaml.dump(key_cfg, ymlfile, default_flow_style=False)
             elif mode == "WIFI":
                 logging.info("WIFI Mode")
     await STOP.wait()
@@ -152,7 +151,7 @@ async def main(args):
         logging.info("Broker successfully closed the connection.")
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
     warnings.filterwarnings('ignore', category=DeprecationWarning)
 
     HOSTNAME = "172.18.0.103"

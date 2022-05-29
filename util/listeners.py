@@ -1,10 +1,9 @@
 import logging
 import socket
-import subprocess
 import threading
 import ssl
-
 import yaml
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from util.bluetooth_tech import BluetoothTech
 from util.mqtt_packet_manager import MQTTPacketManager
@@ -52,6 +51,15 @@ class ClientThread(threading.Thread):
         """
         self.listen()
 
+    # def handle_key_distribution(self):
+    #     with open("./broker_key.yml", 'r') as ymlfile:
+    #         broker_cfg = yaml.safe_load(ymlfile)
+    #     clients = self._client_manager.get_all_client()
+    #     for i in range(len(clients)):
+    #         cli_socket = socket.socket()
+    #         cli_socket = clients[i]
+    #         cli_socket.send(MQTTPacketManager.prepare_pingresp())
+
     def handle_connect(self, parsed_msg):
         """
         Handle the MQTT CONNECT message: update the status of the client to CONN_RECV, store the sent user properties
@@ -78,38 +86,32 @@ class ClientThread(threading.Thread):
             power_ref = cfg['power_ref']
             path_loss_exp = cfg['power_ref']
 
-            if mode == "BL":
-                mac_address = parsed_msg['username']
-                bt_rssi = hci_rssi.RSSI(mac_address)
-                current_rssi = bt_rssi.get_rssi()
-                stdev_power = bt_rssi.get_rssi_stdev(3)
-                d_est, d_min, d_max = bt_rssi.estimate_distance(current_rssi,
-                                                                (d_ref, power_ref, path_loss_exp, stdev_power))
-                logging.info("Current RSSI: " + str(current_rssi))
-                logging.info("Power Reference at 1m: " + str(power_ref))
-                logging.info("Standard Deviation of current power: " + str(stdev_power))
-                logging.info(f"Estimated distance in meters is: {d_est} ")
-                logging.info(f"Distance uncertainty range in meters is: {(d_min, d_max)}")
+            if parsed_msg['username'] != "":
+                if mode == "BL":
+                    mac_address = parsed_msg['username']
+                    bt_rssi = hci_rssi.RSSI(mac_address)
+                    current_rssi = bt_rssi.get_rssi()
+                    stdev_power = bt_rssi.get_rssi_stdev(3)
+                    d_est, d_min, d_max = bt_rssi.estimate_distance(current_rssi,
+                                                                    (d_ref, power_ref, path_loss_exp, stdev_power))
+                    logging.info("Current RSSI: " + str(current_rssi))
+                    logging.info("Power Reference at 1m: " + str(power_ref))
+                    logging.info("Standard Deviation of current power: " + str(stdev_power))
+                    logging.info(f"Estimated distance in meters is: {d_est} ")
+                    logging.info(f"Distance uncertainty range in meters is: {(d_min, d_max)}")
 
-                try:
-                    key_file_path = "./broker_key.config"
-                    keys = dict()
-                    with open(key_file_path) as f:
-                        logging.info("Reading key from %s" % key_file_path)
-                        for l in f:
-                            line = l.strip()
-                            if not line.startswith('#'):  # Allow comments in files
-                                key_type, key = line.split(sep=":", maxsplit=1)
-                                keys[key_type] = key
-                    if bool(keys):
-                        logging.info(f"Key Found {keys['current_key']}")
-                        # BluetoothTech(mac_address).sendmessage(keys["current_key"])
-                except IOError as e:
-                    logging.info(e)
+                    try:
+                        with open("./broker_key.yml", 'r') as ymlfile:
+                            broker_cfg = yaml.safe_load(ymlfile)
+                        if bool(broker_cfg):
+                            logging.info(f"Key Found {broker_cfg['current_key']}")
+                            BluetoothTech(mac_address).sendmessage(broker_cfg['current_key'])
+                    except IOError as e:
+                        logging.info(e)
 
-            elif mode == "WIFI":
-                rssi_value = float(parsed_msg['username'])
-                logging.info(f"Received WIFI RSSI: {rssi_value}")
+                elif mode == "WIFI":
+                    rssi_value = float(parsed_msg['username'])
+                    logging.info(f"Received WIFI RSSI: {rssi_value}")
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()
@@ -215,7 +217,9 @@ class ClientThread(threading.Thread):
         """
         try:
             self._client_manager.add_status(self.client_socket, self.client_address, enums.Status.FRESH)
+            # schedule.every(10).seconds.do(self.handle_key_distribution())
             while self._running:
+                # schedule.run_pending()
                 msg = self.client_socket.recv(1024)
                 if len(msg) > 0:
                     if logger.DEBUG:
@@ -339,6 +343,10 @@ class Listener(object):
         , that then takes over the task of listening for messages on the established socket.
         """
         logger.logging.info(f"{self.__str__()} running ...")
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(self.handle_key_distribution, 'interval', seconds=10)
+        logging.getLogger('apscheduler').setLevel(logging.WARN)
+        scheduler.start()
         while self._running:
             try:
                 client_socket, client_address = self.sock.accept()
@@ -349,6 +357,7 @@ class Listener(object):
                     client_thread.setDaemon(True)
                     client_thread.start()
             except ConnectionAbortedError:
+                scheduler.shutdown()
                 logger.logging.info("Closed socket connection of Listener.")
 
     def close_sockets(self):
@@ -362,6 +371,15 @@ class Listener(object):
                 logger.logging.info(f"\t --- Connection {index + 1}/{len(self.open_sockets)} closed")
             logger.logging.info("--- All open client connections were successfully closed.")
         self.sock.close()
+
+    def handle_key_distribution(self):
+        with open("./broker_key.yml", 'r') as ymlfile:
+            broker_cfg = yaml.safe_load(ymlfile)
+        clients = self._client_manager.get_all_client()
+        for i in range(len(clients)):
+            cli_socket = socket.socket()
+            cli_socket = clients[i]
+            cli_socket.send(MQTTPacketManager.prepare_pingresp())
 
     @property
     def running(self):

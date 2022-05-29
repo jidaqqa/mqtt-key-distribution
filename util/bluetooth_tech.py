@@ -24,7 +24,8 @@ class BluetoothTech:
                 data = client_sock.recv(1024)
                 if not data:
                     break
-                print("Received", data)
+                logging.info(f"Received {data}")
+                return data.decode()
         except OSError:
             pass
 

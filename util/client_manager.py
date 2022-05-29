@@ -1,3 +1,5 @@
+import logging
+
 from util.exceptions import IncorrectProtocolOrderException
 import util.enums as enums
 
@@ -6,6 +8,7 @@ class ClientManager(object):
     def __init__(self):
         self._client_status = {}
         self._client_property = {}
+        self._clients = []
 
     @property
     def client_status(self):
@@ -83,6 +86,8 @@ class ClientManager(object):
             @TypeError: if new_status is not supported
             Nothing: if new_status was successfully set
         """
+        if client_socket not in self._clients:
+            self._clients.append(client_socket)
         if (client_socket, client_address) in self._client_status:
             if isinstance(new_status, enums.Status):
                 current_status = self._client_status[(client_socket, client_address)]
@@ -107,5 +112,17 @@ class ClientManager(object):
         """
         try:
             return self._client_status[(client_socket, client_address)]
+        except IndexError:
+            return None
+
+    def get_all_client(self):
+        """
+        Returns all the current client
+        :param client_socket: client socket of the client
+        :param client_address: client address of the client
+        :return: current status or None if client does not exist
+        """
+        try:
+            return self._clients
         except IndexError:
             return None

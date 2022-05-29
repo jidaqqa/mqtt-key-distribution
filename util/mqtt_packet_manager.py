@@ -1,6 +1,7 @@
 import util.enums as enums
 import util.logger as logger
 import struct
+import netstruct
 
 
 class MQTTPacketManager(object):
@@ -43,8 +44,9 @@ class MQTTPacketManager(object):
         control_packet_type = enums.PacketIdentifer.PINGRESP.value << 4
         control_packet_flags = 0
         fixed_header = control_packet_type | control_packet_flags
-        remaining_length = 0
-        return struct.pack('BB', fixed_header, remaining_length)
+        key = bytes("WDrevvK8ZrPn8gmiNFjcOp2xovBr40TCwJlZOyI94IY=Z", 'utf-8')
+        return netstruct.pack(b"Bb$", fixed_header, key)
+        # return struct.pack('BB', fixed_header, remaining_length)
 
     @staticmethod
     def prepare_connack(parsed_msg):
@@ -452,16 +454,20 @@ class MQTTPacketManager(object):
 
     @staticmethod
     def extract_username(packet, position):
+        if len(packet) > position:
+            length_msb = packet[position]
+            position += 1
+            length_lsb = packet[position]
+            position += 1
+            length_name = (length_msb << 4) | length_lsb
+            username = packet[position: position + length_name].decode('utf-8')
+            position += length_name
+            #    logger.logging.info(f"\tClient-Username: {username}")
+            if logger.DEBUG:
+                logger.logging.debug(f"\tClient-Username: {username}")
+            return position, username
+        else:
+            logger.logging.info("Client Already Has a Key!")
+            return position, ""
 
-        length_msb = packet[position]
-        position += 1
-        length_lsb = packet[position]
-        position += 1
-        length_name = (length_msb << 4) | length_lsb
-        username = packet[position: position + length_name].decode('utf-8')
-        position += length_name
-    #    logger.logging.info(f"\tClient-Username: {username}")
-        if logger.DEBUG:
-            logger.logging.debug(f"\tClient-Username: {username}")
 
-        return position, username
