@@ -28,6 +28,7 @@ if __name__ == "__main__":
 
     # argument for debug mode
     parser.add_argument('-d', '--debug', dest="debug", help="turn on the debug mode for the broker", action='store_true', default=0)
+
     args = parser.parse_args()
 
     # assign argument values

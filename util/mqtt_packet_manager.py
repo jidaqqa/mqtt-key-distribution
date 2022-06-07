@@ -44,9 +44,20 @@ class MQTTPacketManager(object):
         control_packet_type = enums.PacketIdentifer.PINGRESP.value << 4
         control_packet_flags = 0
         fixed_header = control_packet_type | control_packet_flags
-        key = bytes("WDrevvK8ZrPn8gmiNFjcOp2xovBr40TCwJlZOyI94IY=Z", 'utf-8')
+        remaining_length = 0
+        return struct.pack('BB', fixed_header, remaining_length)
+
+    @staticmethod
+    def prepare_pingresp_with_key(key):
+        """
+        Prepare the PINGRESP packet according to the MQTTv5.0 specification Chapter 3.13 PINGRESP – PING response
+        :return: PINGRESP packet that should be sent to the client (as bytes)
+        """
+        control_packet_type = enums.PacketIdentifer.PINGRESP.value << 4
+        control_packet_flags = 0
+        fixed_header = control_packet_type | control_packet_flags
+        key = bytes(key, 'utf-8')
         return netstruct.pack(b"Bb$", fixed_header, key)
-        # return struct.pack('BB', fixed_header, remaining_length)
 
     @staticmethod
     def prepare_connack(parsed_msg):

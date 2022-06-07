@@ -1,17 +1,18 @@
 import asyncio
 import subprocess
 import rssi
-import yaml
-from gmqtt import Client as MQTTClient
+from util.gmqtt.client import Client as MQTTClient
 import argparse
 import random
 import ssl
 import logging
 import warnings
-import os
 import uvloop
 import signal
 from util.bluetooth_tech import BluetoothTech
+from util.yaml_config_rw import YmalReader
+from util.fernet_cha_xtea import *
+
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 STOP = asyncio.Event()
@@ -77,14 +78,13 @@ async def main(args):
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
 
-    with open("./mode.yml", 'r') as ymlfile:
-        cfg = yaml.safe_load(ymlfile)
+    # Ready the mode that the Broker needs to use for key distribution such as Bluethooth, Wifi or LoraWAN and the
+    # required keys
+    yml = YmalReader()
+    mode_cfg = yml.read_yaml('mode.yml')
+    mode = mode_cfg['mode']
+    key_cfg = yml.read_yaml('client_key.yml')
 
-    mode = cfg['mode']
-
-    key_file_path = os.path.dirname(os.path.realpath(__file__)) + "/client_key.yml"
-    with open(key_file_path, 'r') as ymlfile:
-        key_cfg = yaml.safe_load(ymlfile)
 
     # if both, cert and key, are specified, try to establish TLS connection to broker
     if args.cert and args.key:
@@ -132,16 +132,32 @@ async def main(args):
                 client.publish(args.topic, args.message + f" {i}", qos=0)
     else:
         if key_cfg['current_key'] != "":
-            logging.info(f"Publishing '{args.topic}:{args.message}', Multilateral Security: {'on' if args.multilateral else 'off'}")
-            client.publish(args.topic, args.message, qos=0)
+            if mode_cfg['encryption'] == 0:
+                logging.info(f"Publishing '{args.topic}:{args.message}'")
+                client.publish(args.topic, args.message, qos=0)
+            elif mode_cfg['encryption'] == 1:
+                key = FernetXtea.generate_key()
+                key_cfg['current_key'] = key
+                yml.write_yaml("client_key.yml", key_cfg)
+                xtea_instance = FernetXtea(key)
+                ciphertext = xtea_instance.encrypt(bytes(args.message.encode()))
+                logging.info(f"Publishing encrypted message using Xtea for '{args.topic}'")
+                client.publish(args.topic, ciphertext, qos=0)
+            elif mode_cfg['encryption'] == 2:
+                key = FernetChaCha20Poly1305.generate_key()
+                key_cfg['current_key'] = key
+                yml.write_yaml("client_key.yml", key_cfg)
+                cha_instance = FernetChaCha20Poly1305(key)
+                ciphertext = cha_instance.encrypt(args.message)
+                logging.info(f"Publishing encrypted message using ChaCha20Poly1305 for '{args.topic}'")
+                client.publish(args.topic, ciphertext, qos=0)
         else:
-            logging.info("Reading key from %s failed or does not exist" % key_file_path)
+            logging.info("Reading client key from failed or does not exist")
             if mode == "BL":
                 data = BluetoothTech.receivemessages()
                 key_cfg['current_key'] = data
                 logging.info(key_cfg["current_key"])
-                with open(key_file_path, 'w') as ymlfile:
-                    yaml.dump(key_cfg, ymlfile, default_flow_style=False)
+                yml.write_yaml('client_key.yml', key_cfg)
             elif mode == "WIFI":
                 logging.info("WIFI Mode")
     await STOP.wait()

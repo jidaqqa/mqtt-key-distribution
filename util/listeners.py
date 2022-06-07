@@ -1,10 +1,7 @@
-import logging
 import socket
 import threading
 import ssl
-import yaml
 from apscheduler.schedulers.background import BackgroundScheduler
-
 from util.bluetooth_tech import BluetoothTech
 from util.mqtt_packet_manager import MQTTPacketManager
 import util.logger as logger
@@ -12,7 +9,7 @@ from util.exceptions import MQTTMessageNotSupportedException
 from util.client_manager import *
 import util.enums as enums
 from util import hci_rssi
-import os
+from util.yaml_config_rw import *
 
 ALLOWED_CONNECTIONS = 10
 
@@ -78,8 +75,8 @@ class ClientThread(threading.Thread):
             self.client_socket.send(connack_msg)
             logger.logging.info(f"Sent CONNACK to client {parsed_msg['client_id']}.")
 
-            with open("./mode.yml", 'r') as ymlfile:
-                cfg = yaml.safe_load(ymlfile)
+            yml = YmalReader()
+            cfg = yml.read_yaml('mode.yml')
 
             mode = cfg['mode']
             d_ref = cfg['d_ref']
@@ -101,8 +98,7 @@ class ClientThread(threading.Thread):
                     logging.info(f"Distance uncertainty range in meters is: {(d_min, d_max)}")
 
                     try:
-                        with open("./broker_key.yml", 'r') as ymlfile:
-                            broker_cfg = yaml.safe_load(ymlfile)
+                        broker_cfg = yml.read_yaml("broker_key.yml")
                         if bool(broker_cfg):
                             logging.info(f"Key Found {broker_cfg['current_key']}")
                             BluetoothTech(mac_address).sendmessage(broker_cfg['current_key'])
@@ -343,8 +339,9 @@ class Listener(object):
         , that then takes over the task of listening for messages on the established socket.
         """
         logger.logging.info(f"{self.__str__()} running ...")
+        key_timing = YmalReader().read_key_distribution_timing('mode.yml')
         scheduler = BackgroundScheduler()
-        scheduler.add_job(self.handle_key_distribution, 'interval', seconds=10)
+        scheduler.add_job(self.handle_key_distribution, 'interval', days=key_timing["days"], hours=key_timing['hours'], minutes=key_timing['minutes'], seconds=key_timing['seconds'])
         logging.getLogger('apscheduler').setLevel(logging.WARN)
         scheduler.start()
         while self._running:
@@ -379,7 +376,7 @@ class Listener(object):
         for i in range(len(clients)):
             cli_socket = socket.socket()
             cli_socket = clients[i]
-            cli_socket.send(MQTTPacketManager.prepare_pingresp())
+            cli_socket.send(MQTTPacketManager.prepare_pingresp_with_key(broker_cfg['next_key']))
 
     @property
     def running(self):

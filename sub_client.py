@@ -1,5 +1,10 @@
 import asyncio
-from gmqtt import Client as MQTTClient
+import subprocess
+
+import rssi
+
+from util.bluetooth_tech import BluetoothTech
+from util.gmqtt.client import Client as MQTTClient
 import argparse
 import random
 import ssl
@@ -8,6 +13,8 @@ import warnings
 import os
 import uvloop
 import signal
+from util.fernet_cha_xtea import *
+from util.yaml_config_rw import YmalReader
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 STOP = asyncio.Event()
@@ -34,8 +41,21 @@ def on_message(client, topic, payload, qos, properties):
     :param properties: properties of the received message
     """
 
-    logging.info(f'[RECV MSG] {topic}:{payload.decode("utf-8")}')
+    yml = YmalReader()
+    mode_cfg = yml.read_yaml('mode.yml')
+    key_cfg = yml.read_yaml('client_key.yml')
+    key = key_cfg['current_key']
 
+    if mode_cfg['encryption'] == 0:
+        logging.info(f'[RECV MSG] {topic}:{payload.decode("utf-8")}')
+    elif mode_cfg['encryption'] == 1:
+        xtea_instance = FernetXtea(key)
+        plaintext = xtea_instance.decrypt(payload)
+        logging.info(f'[RECV MSG] {topic}:{plaintext}')
+    elif mode_cfg['encryption'] == 2:
+        cha_instance = FernetChaCha20Poly1305(key)
+        plaintext = cha_instance.decrypt(payload)
+        logging.info(f'[RECV MSG] {topic}:{plaintext}')
 
 
 def on_disconnect(client, packet, exc=None):
@@ -109,6 +129,13 @@ async def main(args):
 
     assign_callbacks_to_client(client)
 
+    # Ready the mode that the Broker needs to use for key distribution such as Bluethooth, Wifi or LoraWAN and the
+    # required keys
+    yml = YmalReader()
+    mode_cfg = yml.read_yaml('mode.yml')
+    mode = mode_cfg['mode']
+    key_cfg = yml.read_yaml('client_key.yml')
+
     # if both, cert and key, are specified, try to establish TLS connection to broker
     if args.cert and args.key:
         try:
@@ -123,7 +150,20 @@ async def main(args):
 
     # if both are not specified, then connect via insecure channel
     elif not args.cert and not args.key:
+        if mode == "BL" and key_cfg['current_key'] == "":
+            temp = subprocess.check_output(['hcitool', 'dev'])
+            device_info = temp.decode('utf-8').split()
+            client.set_auth_credentials(device_info[2])
+        elif mode == "WIFI" and key_cfg['current_key'] == "":
+            output = subprocess.check_output(['iwgetid'])
+            interface = output.decode().split()[0]
+            APSSID = output.decode().split()[1]
+            rssi_scanner = rssi.RSSI_Scan(interface)
+            ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
+            logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
+            client.set_auth_credentials(ap_info[0]['signal'])
         await client.connect(host=args.host, port=args.port)
+
     # if only one of them is specified, print error and exit
     else:
         logging.error(f"Client certificate and client private key must be specified if connection should be secure. You have only specified {'the certificate' if args.cert else 'the private key'}.")
@@ -141,8 +181,21 @@ async def main(args):
                 logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
                 client.subscribe(args.topic + f"{i}", qos=0, subscription_identifier=1)
     else:
-        logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
-        client.subscribe(args.topic, qos=0, subscription_identifier=1)
+        if key_cfg['current_key'] != "":
+            logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
+            client.subscribe(args.topic, qos=0, subscription_identifier=1)
+
+        else:
+            logging.info("Reading client key from failed or does not exist")
+            if mode == "BL":
+                data = BluetoothTech.receivemessages()
+                key_cfg['current_key'] = data
+                logging.info(key_cfg["current_key"])
+                yml.write_yaml('client_key.yml', key_cfg)
+                logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
+                client.subscribe(args.topic, qos=0, subscription_identifier=1)
+            elif mode == "WIFI":
+                logging.info("WIFI Mode")
 
     await STOP.wait()
     try:
@@ -154,7 +207,7 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-    HOSTNAME = "MindFlayer.fritz.box"
+    HOSTNAME = "172.18.0.103"
     PORT = 1883
     CLIENT_ID = str(random.randint(0,50000))
 
