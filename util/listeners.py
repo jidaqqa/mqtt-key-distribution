@@ -10,6 +10,7 @@ from util.client_manager import *
 import util.enums as enums
 from util import hci_rssi
 from util.yaml_config_rw import *
+from util.fernet_cha_xtea import *
 
 ALLOWED_CONNECTIONS = 10
 
@@ -370,13 +371,36 @@ class Listener(object):
         self.sock.close()
 
     def handle_key_distribution(self):
-        with open("./broker_key.yml", 'r') as ymlfile:
-            broker_cfg = yaml.safe_load(ymlfile)
-        clients = self._client_manager.get_all_client()
-        for i in range(len(clients)):
-            cli_socket = socket.socket()
-            cli_socket = clients[i]
-            cli_socket.send(MQTTPacketManager.prepare_pingresp_with_key(broker_cfg['next_key']))
+        yml = YmalReader()
+        broker_key_cfg = yml.read_yaml('broker_key.yml')
+        mode_config = yml.read_yaml("mode.yml")
+
+        if mode_config["encryption"] == 1:
+            key = FernetXtea.generate_key()
+            xtea_instance = FernetXtea(broker_key_cfg['current_key'])
+            ciphertext = xtea_instance.encrypt(key)
+            logging.info(ciphertext)
+            clients = self._client_manager.get_all_client()
+            for i in range(len(clients)):
+                cli_socket = socket.socket()
+                cli_socket = clients[i]
+                cli_socket.send(MQTTPacketManager.prepare_pingresp_with_key(ciphertext))
+
+            broker_key_cfg['current_key'] = key
+            yml.write_yaml('broker_key.yml', broker_key_cfg)
+
+        elif mode_config["encryption"] == 2:
+            key = FernetChaCha20Poly1305.generate_key()
+            cha_instance = FernetChaCha20Poly1305(broker_key_cfg['current_key'])
+            ciphertext = cha_instance.encrypt(key.decode())
+            clients = self._client_manager.get_all_client()
+            for i in range(len(clients)):
+                cli_socket = socket.socket()
+                cli_socket = clients[i]
+                cli_socket.send(MQTTPacketManager.prepare_pingresp_with_key(ciphertext))
+
+            broker_key_cfg['current_key'] = key
+            yml.write_yaml('broker_key.yml', broker_key_cfg)
 
     @property
     def running(self):

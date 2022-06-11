@@ -10,7 +10,7 @@ from functools import partial
 from util.yaml_config_rw import *
 
 import yaml
-
+from util.fernet_cha_xtea import *
 from .utils import unpack_variable_byte_integer, IdGenerator, run_coroutine_or_function
 from .property import Property
 from .protocol import MQTTProtocol
@@ -430,12 +430,22 @@ class MqttPackageHandler(EventCallback):
     def _handle_pingresp_packet(self, cmd, packet):
         logger.debug('[PING RESPONSE] %s %s', hex(cmd), packet)
         if len(packet) != 0:
-            key_file_path = os.path.dirname(os.path.abspath("client_key.yml")) + "/client_key.yml"
-            with open(key_file_path, 'r') as ymlfile:
-                key_cfg = yaml.safe_load(ymlfile)
-            key_cfg['current_key'] = packet.decode()
-            with open(key_file_path, 'w') as ymlfile:
-                yaml.dump(key_cfg, ymlfile, default_flow_style=False)
+            yml = YmalReader()
+            mode_cfg = yml.read_yaml('mode.yml')
+            key_cfg = yml.read_yaml('client_key.yml')
+            key = key_cfg['current_key']
+            if mode_cfg['encryption'] == 1:
+                xtea_instance = FernetXtea(key)
+                plaintext = xtea_instance.decrypt(packet)
+                key_cfg['current_key'] = plaintext
+                yml.write_yaml('client_key.yml', key_cfg)
+                logging.info(f'Encryption mode is on with Xtea, new key received!')
+            elif mode_cfg['encryption'] == 2:
+                cha_instance = FernetChaCha20Poly1305(key)
+                plaintext = cha_instance.decrypt(packet.encode())
+                # key_cfg['current_key'] = plaintext.encode('utf-8')
+                # yml.write_yaml('client_key.yml', key_cfg)
+                logging.info(f'Encryption mode is on with ChaCha20Poly1305, new key received!')
 
     def _handle_puback_packet(self, cmd, packet):
         (mid, ) = struct.unpack("!H", packet[:2])

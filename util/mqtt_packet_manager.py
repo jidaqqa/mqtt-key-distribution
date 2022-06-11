@@ -56,7 +56,7 @@ class MQTTPacketManager(object):
         control_packet_type = enums.PacketIdentifer.PINGRESP.value << 4
         control_packet_flags = 0
         fixed_header = control_packet_type | control_packet_flags
-        key = bytes(key, 'utf-8')
+        key = bytes(key)
         return netstruct.pack(b"Bb$", fixed_header, key)
 
     @staticmethod

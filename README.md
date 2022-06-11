@@ -1,7 +1,5 @@
-# Multilateral Security for MQTT
+# Key Distribution in MQTT
 
 * Proof-of-concept implementations for MQTT broker and MQTT client supporting
-  Multilateral Security
+  key distribution
 
-
-## TO BE UPDATED
