@@ -44,6 +44,13 @@ if __name__ == "__main__":
     # create StatusManager
     client_manager = ClientManager()
 
+    # get encryption mode
+    yml = YmalReader()
+    mode_config = yml.read_yaml("mode.yml")
+
+    # get key distribution timing
+    kd_config = yml.read_key_distribution_timing('mode.yml')
+
     # create listeners
     try:
         for listener_config in listener_configs:
@@ -53,7 +60,7 @@ if __name__ == "__main__":
                 else:
                     raise SyntaxError
             elif listener_config.tls == 0:
-                LISTENERS.append(Listener(listener_config, ip=HOSTNAME, debug=logger.DEBUG, subscription_manager=subscription_manager, client_manager=client_manager))
+                LISTENERS.append(Listener(listener_config, mode_config, kd_config, ip=HOSTNAME, debug=logger.DEBUG, subscription_manager=subscription_manager, client_manager=client_manager))
             else:
                 raise ValueError
     except SyntaxError:

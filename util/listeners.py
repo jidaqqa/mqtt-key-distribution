@@ -11,6 +11,7 @@ import util.enums as enums
 from util import hci_rssi
 from util.yaml_config_rw import *
 from util.fernet_cha_xtea import *
+from os.path import exists
 
 ALLOWED_CONNECTIONS = 10
 
@@ -21,7 +22,7 @@ class ClientThread(threading.Thread):
     """
 
     def __init__(self, client_socket, client_address, listener, subscription_manager, client_manager, multilateral,
-                 debug, tls=0):
+                 mode_config, debug, tls=0):
         super().__init__()
         self.client_socket = client_socket
         self.client_address = client_address
@@ -34,6 +35,7 @@ class ClientThread(threading.Thread):
         self._multilateral = multilateral
         self.debug = debug
         self.client_id = ''
+        self._mode_config = mode_config
 
     @property
     def running(self):
@@ -48,15 +50,6 @@ class ClientThread(threading.Thread):
         Start method of the thread
         """
         self.listen()
-
-    # def handle_key_distribution(self):
-    #     with open("./broker_key.yml", 'r') as ymlfile:
-    #         broker_cfg = yaml.safe_load(ymlfile)
-    #     clients = self._client_manager.get_all_client()
-    #     for i in range(len(clients)):
-    #         cli_socket = socket.socket()
-    #         cli_socket = clients[i]
-    #         cli_socket.send(MQTTPacketManager.prepare_pingresp())
 
     def handle_connect(self, parsed_msg):
         """
@@ -75,14 +68,11 @@ class ClientThread(threading.Thread):
             connack_msg = MQTTPacketManager.prepare_connack(parsed_msg)
             self.client_socket.send(connack_msg)
             logger.logging.info(f"Sent CONNACK to client {parsed_msg['client_id']}.")
-
             yml = YmalReader()
-            cfg = yml.read_yaml('mode.yml')
-
-            mode = cfg['mode']
-            d_ref = cfg['d_ref']
-            power_ref = cfg['power_ref']
-            path_loss_exp = cfg['power_ref']
+            mode = self._mode_config['mode']
+            d_ref = self._mode_config['d_ref']
+            power_ref = self._mode_config['power_ref']
+            path_loss_exp = self._mode_config['power_ref']
 
             if parsed_msg['username'] != "":
                 if mode == "BL":
@@ -311,7 +301,7 @@ class Listener(object):
     MQTT Listener. No security mechanisms in place.
     """
 
-    def __init__(self, config, subscription_manager, client_manager, ip, debug=0):
+    def __init__(self, config, mode_config, kd_config, subscription_manager, client_manager, ip, debug=0):
         """
         Constructor for the MQTT Listener
         :param config: contains the initialized config setting
@@ -330,6 +320,8 @@ class Listener(object):
         self.debug = debug
         self._subscription_manager = subscription_manager
         self._client_manager = client_manager
+        self._mode_config = mode_config
+        self._kd_config = kd_config
 
     def __str__(self):
         return f"MQTT Listener: [Port: {self._port}, Multilateral Security: {self._multilateral}]"
@@ -339,10 +331,19 @@ class Listener(object):
         Listens for incoming socket connections to the broker port and creates a @ClientThread for each unique connection
         , that then takes over the task of listening for messages on the established socket.
         """
+
         logger.logging.info(f"{self.__str__()} running ...")
-        key_timing = YmalReader().read_key_distribution_timing('mode.yml')
+
+        if not os.path.exists("./broker_key.yml"):
+            with open("./broker_key.yml", "w"):
+                pass
+            broker_key = {"current_key": ""}
+            yml = YmalReader()
+            yml.write_yaml('./broker_key.yml', broker_key)
+
         scheduler = BackgroundScheduler()
-        scheduler.add_job(self.handle_key_distribution, 'interval', days=key_timing["days"], hours=key_timing['hours'], minutes=key_timing['minutes'], seconds=key_timing['seconds'])
+        scheduler.add_job(self.handle_key_distribution, 'interval', days=self._kd_config["days"], hours=self._kd_config['hours'],
+                          minutes=self._kd_config['minutes'], seconds=self._kd_config['seconds'])
         logging.getLogger('apscheduler').setLevel(logging.WARN)
         scheduler.start()
         while self._running:
@@ -350,7 +351,7 @@ class Listener(object):
                 client_socket, client_address = self.sock.accept()
                 if client_socket and client_address:
                     client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager,
-                                                 self._client_manager, self._multilateral, self.debug)
+                                                 self._client_manager, self._multilateral, self._mode_config, self.debug)
                     self.open_sockets[client_address] = client_thread
                     client_thread.setDaemon(True)
                     client_thread.start()
@@ -373,9 +374,8 @@ class Listener(object):
     def handle_key_distribution(self):
         yml = YmalReader()
         broker_key_cfg = yml.read_yaml('broker_key.yml')
-        mode_config = yml.read_yaml("mode.yml")
 
-        if mode_config["encryption"] == 1:
+        if self._mode_config['encryption'] == 1:
             key = FernetXtea.generate_key()
             xtea_instance = FernetXtea(broker_key_cfg['current_key'])
             ciphertext = xtea_instance.encrypt(key)
@@ -389,7 +389,7 @@ class Listener(object):
             broker_key_cfg['current_key'] = key
             yml.write_yaml('broker_key.yml', broker_key_cfg)
 
-        elif mode_config["encryption"] == 2:
+        elif self._mode_config['encryption'] == 2:
             key = FernetChaCha20Poly1305.generate_key()
             cha_instance = FernetChaCha20Poly1305(broker_key_cfg['current_key'])
             ciphertext = cha_instance.encrypt(key.decode())

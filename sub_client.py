@@ -134,6 +134,14 @@ async def main(args):
     yml = YmalReader()
     mode_cfg = yml.read_yaml('mode.yml')
     mode = mode_cfg['mode']
+
+    if not os.path.exists("./client_key.yml"):
+        with open("./client_key.yml", "w"):
+            pass
+        broker_key = {"current_key": ""}
+        yml = YmalReader()
+        yml.write_yaml('./client_key.yml', broker_key)
+
     key_cfg = yml.read_yaml('client_key.yml')
 
     # if both, cert and key, are specified, try to establish TLS connection to broker
