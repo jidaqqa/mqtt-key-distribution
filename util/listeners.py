@@ -337,9 +337,16 @@ class Listener(object):
         if not os.path.exists("./broker_key.yml"):
             with open("./broker_key.yml", "w"):
                 pass
-            broker_key = {"current_key": ""}
-            yml = YmalReader()
-            yml.write_yaml('./broker_key.yml', broker_key)
+            if self._mode_config['encryption'] == 1:
+                new_key = FernetXtea.generate_key()
+                broker_key = {"current_key": new_key}
+                yml = YmalReader()
+                yml.write_yaml('./broker_key.yml', broker_key)
+            elif self._mode_config['encryption'] == 2:
+                new_key = FernetChaCha20Poly1305.generate_key()
+                broker_key = {"current_key": new_key}
+                yml = YmalReader()
+                yml.write_yaml('./broker_key.yml', broker_key)
 
         scheduler = BackgroundScheduler()
         scheduler.add_job(self.handle_key_distribution, 'interval', days=self._kd_config["days"], hours=self._kd_config['hours'],
