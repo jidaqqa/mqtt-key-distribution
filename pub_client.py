@@ -12,6 +12,7 @@ import signal
 from util.bluetooth_tech import BluetoothTech
 from util.yaml_config_rw import YmalReader
 from util.fernet_cha_xtea import *
+from util.bleClient import *
 
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -109,6 +110,7 @@ async def main(args):
     # if both are not specified, then connect via insecure channel
     elif not args.cert and not args.key:
         if mode == "BL" and key_cfg['current_key'] == "":
+            logging.info("Bluetooth Mode!")
             temp = subprocess.check_output(['hcitool', 'dev'])
             device_info = temp.decode('utf-8').split()
             client.set_auth_credentials(device_info[2])
@@ -156,10 +158,13 @@ async def main(args):
         else:
             logging.info("Reading client key from failed or does not exist")
             if mode == "BL":
-                data = BluetoothTech.receivemessages()
-                key_cfg['current_key'] = data
+                # data = BluetoothTech.receivemessages()
+                bleClnt = bleClient()
+                bleClnt.start()
+                key_cfg['current_key'] = bleClnt.receive()
                 logging.info(key_cfg["current_key"])
                 yml.write_yaml('client_key.yml', key_cfg)
+                bleClnt.stop()
             elif mode == "WIFI":
                 logging.info("WIFI Mode")
     await STOP.wait()

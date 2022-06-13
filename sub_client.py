@@ -10,7 +10,6 @@ import random
 import ssl
 import logging
 import warnings
-import os
 import uvloop
 import signal
 from util.fernet_cha_xtea import *
@@ -212,10 +211,10 @@ async def main(args):
         logging.info("Broker successfully closed the connection.")
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
     warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-    HOSTNAME = "172.18.0.103"
+    HOSTNAME = "172.18.0.102"
     PORT = 1883
     CLIENT_ID = str(random.randint(0,50000))
 

@@ -22,7 +22,7 @@ class ClientThread(threading.Thread):
     """
 
     def __init__(self, client_socket, client_address, listener, subscription_manager, client_manager, multilateral,
-                 mode_config, debug, tls=0):
+                 mode_config, bleserver ,debug, tls=0):
         super().__init__()
         self.client_socket = client_socket
         self.client_address = client_address
@@ -36,6 +36,7 @@ class ClientThread(threading.Thread):
         self.debug = debug
         self.client_id = ''
         self._mode_config = mode_config
+        self._ble_server = bleserver
 
     @property
     def running(self):
@@ -75,6 +76,7 @@ class ClientThread(threading.Thread):
             path_loss_exp = self._mode_config['power_ref']
 
             if parsed_msg['username'] != "":
+                # logging.info(f"Username not empty! {parsed_msg['username']}")
                 if mode == "BL":
                     mac_address = parsed_msg['username']
                     bt_rssi = hci_rssi.RSSI(mac_address)
@@ -92,7 +94,10 @@ class ClientThread(threading.Thread):
                         broker_cfg = yml.read_yaml("broker_key.yml")
                         if bool(broker_cfg):
                             logging.info(f"Key Found {broker_cfg['current_key']}")
-                            BluetoothTech(mac_address).sendmessage(broker_cfg['current_key'])
+                            self._ble_server.start()
+                            #BluetoothTech(mac_address).sendmessage(broker_cfg['current_key'])
+                            self._ble_server.sendData(broker_cfg['current_key'])
+                            self._ble_server.stop()
                     except IOError as e:
                         logging.info(e)
 
@@ -301,7 +306,7 @@ class Listener(object):
     MQTT Listener. No security mechanisms in place.
     """
 
-    def __init__(self, config, mode_config, kd_config, subscription_manager, client_manager, ip, debug=0):
+    def __init__(self, config, bleserver, mode_config, kd_config, subscription_manager, client_manager, ip, debug=0):
         """
         Constructor for the MQTT Listener
         :param config: contains the initialized config setting
@@ -322,6 +327,7 @@ class Listener(object):
         self._client_manager = client_manager
         self._mode_config = mode_config
         self._kd_config = kd_config
+        self._bleserver = bleserver
 
     def __str__(self):
         return f"MQTT Listener: [Port: {self._port}, Multilateral Security: {self._multilateral}]"
@@ -347,6 +353,17 @@ class Listener(object):
                 broker_key = {"current_key": new_key}
                 yml = YmalReader()
                 yml.write_yaml('./broker_key.yml', broker_key)
+        else:
+            if self._mode_config['encryption'] == 1:
+                new_key = FernetXtea.generate_key()
+                broker_key = {"current_key": new_key}
+                yml = YmalReader()
+                yml.write_yaml('./broker_key.yml', broker_key)
+            elif self._mode_config['encryption'] == 2:
+                new_key = FernetChaCha20Poly1305.generate_key()
+                broker_key = {"current_key": new_key}
+                yml = YmalReader()
+                yml.write_yaml('./broker_key.yml', broker_key)
 
         scheduler = BackgroundScheduler()
         scheduler.add_job(self.handle_key_distribution, 'interval', days=self._kd_config["days"], hours=self._kd_config['hours'],
@@ -358,7 +375,7 @@ class Listener(object):
                 client_socket, client_address = self.sock.accept()
                 if client_socket and client_address:
                     client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager,
-                                                 self._client_manager, self._multilateral, self._mode_config, self.debug)
+                                                 self._client_manager, self._multilateral, self._mode_config, self._bleserver, self.debug)
                     self.open_sockets[client_address] = client_thread
                     client_thread.setDaemon(True)
                     client_thread.start()
