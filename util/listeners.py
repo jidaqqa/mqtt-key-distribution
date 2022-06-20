@@ -76,8 +76,9 @@ class ClientThread(threading.Thread):
             path_loss_exp = self._mode_config['power_ref']
 
             if parsed_msg['username'] != "":
-                # logging.info(f"Username not empty! {parsed_msg['username']}")
+                logging.info(f"Username not empty! {parsed_msg['username']}")
                 if mode == "BL":
+                    self._ble_server.start()
                     mac_address = parsed_msg['username']
                     bt_rssi = hci_rssi.RSSI(mac_address)
                     current_rssi = bt_rssi.get_rssi()
@@ -94,7 +95,6 @@ class ClientThread(threading.Thread):
                         broker_cfg = yml.read_yaml("broker_key.yml")
                         if bool(broker_cfg):
                             logging.info(f"Key Found {broker_cfg['current_key']}")
-                            self._ble_server.start()
                             #BluetoothTech(mac_address).sendmessage(broker_cfg['current_key'])
                             self._ble_server.sendData(broker_cfg['current_key'])
                             self._ble_server.stop()
