@@ -126,3 +126,10 @@ class ClientManager(object):
             return self._clients
         except IndexError:
             return None
+
+    def remove_client(self, client):
+        """
+        Removes disconnected client
+
+        """
+        self._clients.remove(client)

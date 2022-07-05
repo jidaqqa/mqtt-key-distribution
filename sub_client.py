@@ -14,6 +14,7 @@ import uvloop
 import signal
 from util.fernet_cha_xtea import *
 from util.yaml_config_rw import YmalReader
+from util.bleClient import *
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 STOP = asyncio.Event()
@@ -195,10 +196,16 @@ async def main(args):
         else:
             logging.info("Reading client key from failed or does not exist")
             if mode == "BL":
-                data = BluetoothTech.receivemessages()
-                key_cfg['current_key'] = data
+                # data = BluetoothTech.receivemessages()
+                # key_cfg['current_key'] = data
+                # logging.info(key_cfg["current_key"])
+                # yml.write_yaml('client_key.yml', key_cfg)
+                bleClnt = bleClient()
+                bleClnt.start()
+                key_cfg['current_key'] = bleClnt.receive()
                 logging.info(key_cfg["current_key"])
                 yml.write_yaml('client_key.yml', key_cfg)
+                bleClnt.stop()
                 logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
                 client.subscribe(args.topic, qos=0, subscription_identifier=1)
             elif mode == "WIFI":
@@ -214,7 +221,7 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
     warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-    HOSTNAME = "172.18.0.102"
+    HOSTNAME = "172.18.0.101"
     PORT = 1883
     CLIENT_ID = str(random.randint(0,50000))
 

@@ -79,17 +79,17 @@ class ClientThread(threading.Thread):
                 logging.info(f"Username not empty! {parsed_msg['username']}")
                 if mode == "BL":
                     self._ble_server.start()
-                    mac_address = parsed_msg['username']
-                    bt_rssi = hci_rssi.RSSI(mac_address)
-                    current_rssi = bt_rssi.get_rssi()
-                    stdev_power = bt_rssi.get_rssi_stdev(3)
-                    d_est, d_min, d_max = bt_rssi.estimate_distance(current_rssi,
-                                                                    (d_ref, power_ref, path_loss_exp, stdev_power))
-                    logging.info("Current RSSI: " + str(current_rssi))
-                    logging.info("Power Reference at 1m: " + str(power_ref))
-                    logging.info("Standard Deviation of current power: " + str(stdev_power))
-                    logging.info(f"Estimated distance in meters is: {d_est} ")
-                    logging.info(f"Distance uncertainty range in meters is: {(d_min, d_max)}")
+                    # mac_address = parsed_msg['username']
+                    # bt_rssi = hci_rssi.RSSI(mac_address)
+                    # current_rssi = bt_rssi.get_rssi()
+                    # stdev_power = bt_rssi.get_rssi_stdev(3)
+                    # d_est, d_min, d_max = bt_rssi.estimate_distance(current_rssi,
+                    #                                                 (d_ref, power_ref, path_loss_exp, stdev_power))
+                    # logging.info("Current RSSI: " + str(current_rssi))
+                    # logging.info("Power Reference at 1m: " + str(power_ref))
+                    # logging.info("Standard Deviation of current power: " + str(stdev_power))
+                    # logging.info(f"Estimated distance in meters is: {d_est} ")
+                    # logging.info(f"Distance uncertainty range in meters is: {(d_min, d_max)}")
 
                     try:
                         broker_cfg = yml.read_yaml("broker_key.yml")
@@ -201,6 +201,7 @@ class ClientThread(threading.Thread):
         client_multilateral = self._determine_client_multilateral()
         self._subscription_manager.remove_subscriber(self.client_socket, self.client_address, self._tls,
                                                      (self._multilateral or client_multilateral), self.client_id)
+        self._client_manager.remove_client(self.client_socket)
         self.close()
 
     def listen(self):
