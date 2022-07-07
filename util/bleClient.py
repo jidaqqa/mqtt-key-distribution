@@ -18,7 +18,7 @@ class bleClient:
         try:
             bleService = {}
             logging.info("Searching for  Bluetooth services ...")
-            for reConnect in range(2, 4):
+            for reConnect in range(1, 4):
                 bleService = find_service(name="MQTT-Broker", address=self.addr)
                 if len(bleService) == 0:
                     logging.info("Re-connecting  Bluetooth services : %d attempt", reConnect)
@@ -39,7 +39,7 @@ class bleClient:
                 logging.info("Description\t: %s", bleService[0]['description'])
                 self.bleService = bleService
         except (Exception, BluetoothError, SystemExit, KeyboardInterrupt) as e:
-            logging.error("Couldn't find the RaspberryPi Bluetooth service : Invalid uuid", exc_info=True)
+            logging.error("Couldn't find the MQTT-Broker Bluetooth service", exc_info=True)
 
     def getBluetoothSocket(self):
         try:
@@ -84,13 +84,13 @@ class bleClient:
             logging.error("Failed to close the bluetooth client socket ", exc_info=True)
 
     def start(self):
-        # Search for the RaspberryPi Bluetooth service
-        self.getBluetoothServices()
-        # Create the client socket
-        self.getBluetoothSocket()
-        # Connect to bluetooth service
-        self.getBluetoothConnection()
-        # self.sendData()
+        # Search for the MQTT-Broker Bluetooth service
+        if self.getBluetoothServices():
+            # Create the client socket
+            self.getBluetoothSocket()
+            # Connect to bluetooth service
+            self.getBluetoothConnection()
+            # self.sendData()
 
     def receive(self):
         # receive data
