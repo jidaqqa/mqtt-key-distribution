@@ -85,12 +85,12 @@ class bleClient:
 
     def start(self):
         # Search for the MQTT-Broker Bluetooth service
-        if self.getBluetoothServices():
-            # Create the client socket
-            self.getBluetoothSocket()
-            # Connect to bluetooth service
-            self.getBluetoothConnection()
-            # self.sendData()
+        self.getBluetoothServices()
+        # Create the client socket
+        self.getBluetoothSocket()
+        # Connect to bluetooth service
+        self.getBluetoothConnection()
+        # self.sendData()
 
     def receive(self):
         # receive data
