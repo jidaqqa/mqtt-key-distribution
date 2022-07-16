@@ -53,6 +53,7 @@ class bleServer:
         try:
             self.clientSocket, clientInfo = self.serverSocket.accept()
             logging.info("Accepted bluetooth connection from %s", clientInfo)
+            return clientInfo
         except (Exception, BluetoothError, SystemExit, KeyboardInterrupt) as e:
             logging.error("Failed to accept bluetooth connection ... ", exc_info=True)
 
@@ -70,9 +71,17 @@ class bleServer:
 
     def closeBluetoothSocket(self):
         try:
-            self.clientSocket.close()
+            if self.clientSocket:
+                self.clientSocket.close()
             self.serverSocket.close()
             logging.info("Bluetooth sockets successfully closed ...")
+        except (Exception, BluetoothError) as e:
+            logging.error("Failed to close the bluetooth sockets ", exc_info=True)
+
+    def closeClientSocket(self):
+        try:
+            self.clientSocket.close()
+            logging.info("Client Bluetooth sockets successfully closed ...")
         except (Exception, BluetoothError) as e:
             logging.error("Failed to close the bluetooth sockets ", exc_info=True)
 
@@ -88,7 +97,7 @@ class bleServer:
         # advertising bluetooth services
         self.advertiseBluetoothService()
         # Accepting bluetooth connection
-        self.acceptBluetoothConnection()
+        # self.acceptBluetoothConnection()
 
     def receive(self):
         # receive data

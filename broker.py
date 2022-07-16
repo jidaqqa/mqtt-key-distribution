@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # Listeners
     LISTENERS = []
     RUNNING_THREADS = []
-    HOSTNAME = "172.18.0.105"
+    HOSTNAME = "172.18.0.103"
     # default configs
     CONFIG_PATH = os.path.dirname(os.path.realpath(__file__)) + "/broker.config"
 
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     # Start the Bluetooth Service
     bleSvr = bleServer()
-    # bleSvr.start()
+    bleSvr.start()
 
     # create listeners
     try:
@@ -98,9 +98,13 @@ if __name__ == "__main__":
             logger.logging.info(f"Stopping {LISTENERS[index]} ...")
             LISTENERS[index].running = False
 
+
             logger.logging.info(f"Stopping Thread ...")
             thread.join(1)
 
             logger.logging.info(f"Closing Sockets ...")
             LISTENERS[index].close_sockets()
+        if mode_config["mode"] == "BL":
+            logger.logging.info("Closing Bluetooth service.")
+            bleSvr.stop()
         logger.logging.info("Broker shutdown complete.")

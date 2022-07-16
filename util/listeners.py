@@ -74,30 +74,28 @@ class ClientThread(threading.Thread):
             d_ref = self._mode_config['d_ref']
             power_ref = self._mode_config['power_ref']
             path_loss_exp = self._mode_config['path_loss_exp']
+            key_range = self._mode_config['key_range']
 
             if parsed_msg['username'] != "":
-                logging.info(f"Username not empty! {parsed_msg['username']}")
+                # logging.info(f"Username not empty! {parsed_msg['username']}")
                 if mode == "BL":
-                    self._ble_server.start()
-                    mac_address = parsed_msg['username']
-                    bt_rssi = hci_rssi.RSSI(mac_address)
+                    clientInfo = self._ble_server.acceptBluetoothConnection()
+                    bt_rssi = hci_rssi.RSSI(clientInfo[0])
                     current_rssi = bt_rssi.get_rssi()
-                    stdev_power = bt_rssi.get_rssi_stdev(3)
-                    d_est, d_min, d_max = bt_rssi.estimate_distance(current_rssi,
-                                                                    (d_ref, power_ref, path_loss_exp, stdev_power))
+                    d_est = bt_rssi.estimate_distance(current_rssi, (d_ref, power_ref, path_loss_exp))
                     logging.info("Current RSSI: " + str(current_rssi))
                     logging.info("Power Reference at 1m: " + str(power_ref))
-                    logging.info("Standard Deviation of current power: " + str(stdev_power))
                     logging.info(f"Estimated distance in meters is: {d_est} ")
-                    logging.info(f"Distance uncertainty range in meters is: {(d_min, d_max)}")
 
                     try:
-                        broker_cfg = yml.read_yaml("broker_key.yml")
-                        if bool(broker_cfg):
-                            logging.info(f"Key Found {broker_cfg['current_key']}")
-                            #BluetoothTech(mac_address).sendmessage(broker_cfg['current_key'])
-                            self._ble_server.sendData(broker_cfg['current_key'])
-                            self._ble_server.stop()
+                        if d_est <= key_range:
+                            broker_cfg = yml.read_yaml("broker_key.yml")
+                            if bool(broker_cfg):
+                                logging.info(f"Key Found {broker_cfg['current_key']}")
+                                self._ble_server.sendData(broker_cfg['current_key'])
+                        else:
+                            logging.info(f"Device {clientInfo[0]} is out of range! ")
+                            self._ble_server.closeClientSocket()
                     except IOError as e:
                         logging.info(e)
 

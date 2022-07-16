@@ -55,21 +55,21 @@ class RSSI:
                 respectively, in meters rounded to two decimal points
         """
         if params is None:
-            params = (1.0, -55.0, 2.0, 2.5)
+            params = (1.0, -55.0, 2.0)
             # the above values are arbitrarily chosen "default values"
             # should be changed based on measurements
         d_ref = params[0]  # reference distance
         power_ref = params[1]  # mean received power at reference distance
         path_loss_exp = params[2]  # path loss exponent
-        stdev_power = params[3]  # standard deviation of received power
+        # stdev_power = params[3]  # standard deviation of received power
 
-        uncertainty = 2 * stdev_power  # uncertainty in RSS corresponding to 95.45% confidence
+        # uncertainty = 2 * stdev_power  # uncertainty in RSS corresponding to 95.45% confidence
 
         d_est = d_ref * (10 ** (-(power_received - power_ref) / (10 * path_loss_exp)))
-        d_min = d_ref * (10 ** (-(power_received - power_ref + uncertainty) / (10 * path_loss_exp)))
-        d_max = d_ref * (10 ** (-(power_received - power_ref - uncertainty) / (10 * path_loss_exp)))
-
-        return (np.round(d_est, 2), np.round(d_min, 2), np.round(d_max, 2))
+        # d_min = d_ref * (10 ** (-(power_received - power_ref + uncertainty) / (10 * path_loss_exp)))
+        # d_max = d_ref * (10 ** (-(power_received - power_ref - uncertainty) / (10 * path_loss_exp)))
+        # (np.round(d_est, 2), np.round(d_min, 2), np.round(d_max, 2)
+        return np.round(d_est, 2)
 
 # if __name__ == '__main__':
 #    print(get_rssi('E8:5A:8B:9E:EE:D8'))
