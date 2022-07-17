@@ -5,7 +5,6 @@ import util.logger as logger
 from util.listeners import *
 from util.configreader import BrokerConfigReader as ConfigReader
 from util.client_manager import ClientManager
-from util.lora_wan import loraWan
 
 
 if __name__ == "__main__":
@@ -54,9 +53,9 @@ if __name__ == "__main__":
     if mode_config["mode"] == "BL":
         bleSvr = bleServer()
         bleSvr.start()
-    elif mode_config["mode"] == "LORA":
-        lr = loraWan("/dev/ttyS0", 433, 0, 22, True)
-        lora_thread = threading.Thread(target=lr.receive_data())
+    # elif mode_config["mode"] == "LORA":
+    #     lr = loraWan("/dev/ttyS0", 433, 0, 22, True)
+    #     lora_thread = threading.Thread(target=lr.receive_data())
     # create listeners
     try:
         for listener_config in listener_configs:

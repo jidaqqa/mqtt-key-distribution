@@ -337,10 +337,10 @@ class loraWan:
         while True:
             data = self.node.receive()
             if data is not None:
-                print(data)
                 break
+        return data
 
-    def distance_est(self, power_received, d_ref, power_ref, path_loss_exp):
+    def distance_est(self, d_ref, power_ref, path_loss_exp):
         """This function returns an estimated distance range
                given a single radio signal strength (RSS) reading
                (received power measurement) in dBm.
@@ -348,5 +348,8 @@ class loraWan:
                 (d_est): float values containing
                     the estimated distancein meters rounded to two decimal points
             """
-        d_est = d_ref * (10 ** (-(power_received - power_ref) / (10 * path_loss_exp)))
-        return np.round(d_est, 2)
+        data = self.receive_data()
+        d_est = d_ref * (10 ** (-(int(data['rssi']) - power_ref) / (10 * path_loss_exp)))
+        logging.info("Current RSSI: " + str(data['rssi']))
+        logging.info("Power Reference at 1m: " + str(power_ref))
+        logging.info(f"Estimated distance in meters is: {d_est} ")

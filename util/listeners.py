@@ -2,7 +2,6 @@ import socket
 import threading
 import ssl
 from apscheduler.schedulers.background import BackgroundScheduler
-from util.bluetooth_tech import BluetoothTech
 from util.mqtt_packet_manager import MQTTPacketManager
 import util.logger as logger
 from util.exceptions import MQTTMessageNotSupportedException
@@ -11,7 +10,7 @@ import util.enums as enums
 from util import hci_rssi
 from util.yaml_config_rw import *
 from util.fernet_cha_xtea import *
-from os.path import exists
+from util.lora_wan import loraWan
 
 ALLOWED_CONNECTIONS = 10
 
@@ -102,6 +101,10 @@ class ClientThread(threading.Thread):
                 elif mode == "WIFI":
                     rssi_value = float(parsed_msg['username'])
                     logging.info(f"Received WIFI RSSI: {rssi_value}")
+
+                elif mode == "LORA":
+                    lr = loraWan("/dev/ttyS0", 433, 0, 22, True)
+                    lr.distance_est()
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()
