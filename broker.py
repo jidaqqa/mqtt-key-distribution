@@ -1,14 +1,11 @@
-import os
 import argparse
-import threading
-import time
-
 from util.bleServer import *
 from util.subscription_manager import SubscriptionManager
 import util.logger as logger
 from util.listeners import *
 from util.configreader import BrokerConfigReader as ConfigReader
 from util.client_manager import ClientManager
+from util.lora_wan import loraWan
 
 
 if __name__ == "__main__":
@@ -54,9 +51,12 @@ if __name__ == "__main__":
     kd_config = yml.read_key_distribution_timing('mode.yml')
 
     # Start the Bluetooth Service
-    bleSvr = bleServer()
-    bleSvr.start()
-
+    if mode_config["mode"] == "BL":
+        bleSvr = bleServer()
+        bleSvr.start()
+    elif mode_config["mode"] == "LORA":
+        lr = loraWan("/dev/ttyS0", 433, 0, 22, True)
+        lora_thread = threading.Thread(target=lr.receive_data())
     # create listeners
     try:
         for listener_config in listener_configs:

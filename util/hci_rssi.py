@@ -11,15 +11,29 @@ class RSSI:
     def __init__(self, addr):
         self.addr = addr
 
+    # def get_rssi(self):
+    #     bt_sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
+    #     bt_sock.connect((self.addr, 1))
+    #     cmd = 'hcitool'
+    #     temp = subprocess.check_output([cmd, 'rssi', self.addr])
+    #     output_rssi = temp.decode('utf-8').split()
+    #     rssi_value = float(output_rssi[3])
+    #     bt_sock.close()
+    #     return rssi_value.
+
     def get_rssi(self):
-        bt_sock = bluetooth.BluetoothSocket(bluetooth.L2CAP)
-        bt_sock.connect((self.addr, 1))
-        cmd = 'hcitool'
-        temp = subprocess.check_output([cmd, 'rssi', self.addr])
-        output_rssi = temp.decode('utf-8').split()
-        rssi_value = float(output_rssi[3])
-        bt_sock.close()
-        return rssi_value
+        try:
+            p = subprocess.Popen('sudo btmgmt find | grep {}'.format(self.addr), stdout=subprocess.PIPE, shell=True)
+            a, b = p.communicate()
+            read_lst = []
+            for reading in str(a).split('\\n')[:-1]:
+                reading = reading.split('rssi ')[1]
+                reading = reading.split(' flags')[0]
+                reading = int(reading)
+                read_lst.append(reading)
+            return read_lst[0]
+        except:
+            print("Make sure your device is discoverable!")
 
     def get_average_rssi(self, number_of_loops):
         rssi_value = 0

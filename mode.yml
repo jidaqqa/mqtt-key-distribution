@@ -1,17 +1,20 @@
-mode : "BL" # Bluetooth Mode
-d_ref : 1  # reference distance
-power_ref : 1.2  # mean received power at reference distance
-path_loss_exp : 2 # path loss exponent
-key_renew_timing : '0/0/2/0' # Example days/hours/minutes/seconds
-encryption : 1 # 0=No Encryption, 1=Encryption Using Xtea, 2=Encryption Using ChaCha20Poly1305
-key_range : 10 # The range that a device is accepted to receive a key in m
+#mode : "BL" # Bluetooth Mode
+#d_ref : 1  # reference distance
+#power_ref : 1.2  # mean received power at reference distance
+#path_loss_exp : 2 # path loss exponent
+#key_renew_timing : '0/0/2/0' # Example days/hours/minutes/seconds
+#encryption : 1 # 0=No Encryption, 1=Encryption Using Xtea, 2=Encryption Using ChaCha20Poly1305
+#key_range : 10 # The range that a device is accepted to receive a key in m
 
 #mode : "WIFI" # WIFI Mode
 #d_ref : 1  # reference distance
 #power_ref : -10  # mean received power at reference distance
 #path_loss_exp : 2 # path loss exponent
 
-#mode : "LORA" # LORA WAN Mode
-#d_ref : 1  # reference distance
-#power_ref : -10  # mean received power at reference distance
-#path_loss_exp : 2 # path loss exponent
+mode : "LORA" # Bluetooth Mode
+d_ref : 1  # reference distance
+power_ref : -19  # mean received power at reference distance
+path_loss_exp : 2 # path loss exponent
+key_renew_timing : '0/0/3/0' # Example days/hours/minutes/seconds
+encryption : 1 # 0=No Encryption, 1=Encryption Using Xtea, 2=Encryption Using ChaCha20Poly1305
+key_range : 10 # The range that a device is accepted to receive a key in m
