@@ -349,18 +349,19 @@ class loraWan:
             """
 
         data = self.receive_data()
-        d_est = d_ref * (10 ** (-(int(data['rssi']) - power_ref) / (10 * path_loss_exp)))
-        logging.info("Current RSSI: " + str(data['rssi']))
-        logging.info("Power Reference at 1m: " + str(power_ref))
-        logging.info(f"Estimated distance in meters is: {d_est} ")
-        yml = YmalReader()
-        try:
-            if d_est <= key_range:
-                broker_cfg = yml.read_yaml("broker_key.yml")
-                if bool(broker_cfg):
-                    logging.info(f"Key Found {broker_cfg['current_key']}")
-                    self.send_deal(broker_cfg['current_key'], 100)
-            else:
-                logging.info(f"Device is out of range! ")
-        except IOError as e:
-            logging.info(e)
+        if int(data['payload']) != 0:
+            d_est = d_ref * (10 ** (-(int(data['rssi']) - power_ref) / (10 * path_loss_exp)))
+            logging.info("Current RSSI: " + str(data['rssi']))
+            logging.info("Power Reference at 1m: " + str(power_ref))
+            logging.info(f"Estimated distance in meters is: {d_est} ")
+            yml = YmalReader()
+            try:
+                if d_est <= key_range:
+                    broker_cfg = yml.read_yaml("broker_key.yml")
+                    if bool(broker_cfg):
+                        logging.info(f"Key Found {broker_cfg['current_key']}")
+                        self.send_deal(broker_cfg['current_key'], 100)
+                else:
+                    logging.info(f"Device is out of range! ")
+            except IOError as e:
+                logging.info(e)
