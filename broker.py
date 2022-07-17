@@ -11,7 +11,7 @@ if __name__ == "__main__":
     # Listeners
     LISTENERS = []
     RUNNING_THREADS = []
-    HOSTNAME = "172.18.0.103"
+    HOSTNAME = "172.18.0.101"
     # default configs
     CONFIG_PATH = os.path.dirname(os.path.realpath(__file__)) + "/broker.config"
 

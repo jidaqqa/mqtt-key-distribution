@@ -104,7 +104,7 @@ class ClientThread(threading.Thread):
 
                 elif mode == "LORA":
                     lr = loraWan("/dev/ttyS0", 433, 0, 22, True)
-                    lr.distance_est()
+                    lr.distance_est(d_ref, power_ref, path_loss_exp)
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()

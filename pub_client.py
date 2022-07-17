@@ -13,6 +13,7 @@ from util.bluetooth_tech import BluetoothTech
 from util.yaml_config_rw import YmalReader
 from util.fernet_cha_xtea import *
 from util.bleClient import *
+from util.lora_wan import loraWan
 
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -158,15 +159,15 @@ async def main(args):
         else:
             logging.info("Reading client key from failed or does not exist")
             if mode == "BL":
-                # data = BluetoothTech.receivemessages()
                 bleClnt = bleClient()
                 bleClnt.start()
                 key_cfg['current_key'] = bleClnt.receive()
                 logging.info(key_cfg["current_key"])
                 yml.write_yaml('client_key.yml', key_cfg)
                 bleClnt.stop()
-            elif mode == "WIFI":
-                logging.info("WIFI Mode")
+            elif mode == "LORA":
+                lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
+                lr.send_deal()
     await STOP.wait()
     try:
         await client.disconnect(session_expiry_interval=0)
