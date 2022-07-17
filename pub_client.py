@@ -12,7 +12,7 @@ from util.yaml_config_rw import YmalReader
 from util.fernet_cha_xtea import *
 from util.bleClient import *
 from util.lora_wan import loraWan
-
+import base64
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 STOP = asyncio.Event()
@@ -142,7 +142,15 @@ async def main(args):
                 logging.info(f"Message {i} sent without Multilateral Security")
                 client.publish(args.topic, args.message + f" {i}", qos=0)
     else:
+        lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
         if key_cfg['current_key'] != "":
+            if mode == "BL":
+                bleClnt = bleClient()
+                bleClnt.start("0")
+                bleClnt.stop()
+            elif mode == "LORA":
+                lr.send_deal("0", 100)
+
             if mode_cfg['encryption'] == 0:
                 logging.info(f"Publishing '{args.topic}:{args.message}'")
                 client.publish(args.topic, args.message, qos=0)
@@ -160,14 +168,18 @@ async def main(args):
             logging.info("Reading client key from failed or does not exist")
             if mode == "BL":
                 bleClnt = bleClient()
-                bleClnt.start(0)
+                bleClnt.start("1")
                 key_cfg['current_key'] = bleClnt.receive()
                 logging.info(key_cfg["current_key"])
                 yml.write_yaml('client_key.yml', key_cfg)
                 bleClnt.stop()
             elif mode == "LORA":
-                lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
-                lr.send_deal("LoraWAN", 0)
+                lr.send_deal("1", 100)
+                data = lr.receive_data()
+                #if mode_cfg['encryption'] == 1:
+                key_cfg['current_key'] = data['payload']
+                logging.info(key_cfg["current_key"])
+                yml.write_yaml('client_key.yml', key_cfg)
     await STOP.wait()
     try:
         await client.disconnect(session_expiry_interval=0)

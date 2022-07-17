@@ -42,7 +42,7 @@ def estimate_distance(power_received, params=None):
 # example usage, for testing
 if __name__ == '__main__':
 
-    bt_rssi = hci_rssi.RSSI()
+    bt_rssi = hci_rssi
     current_rssi = bt_rssi.get_rssi()
     power_ref = bt_rssi.get_average_rssi(3)
     stdev_power = bt_rssi.get_rssi_stdev(10)

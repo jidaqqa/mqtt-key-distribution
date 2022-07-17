@@ -266,7 +266,7 @@ class sx126x:
             r_buff = self.ser.read(self.ser.inWaiting())
 
             # payload = str(r_buff[2:-1])
-            data['payload'] = str(r_buff[2:-1])
+            data['payload'] = r_buff[2:-1].decode()
             # print("receive message from address\033[1;32m %d node \033[0m"%((r_buff[0]<<8)+r_buff[1]),end='\r\n',flush = True)
             # print("message is "+str(r_buff[2:-1]),end='\r\n')
 
@@ -326,11 +326,11 @@ class loraWan:
         self.node = sx126x(serial_num=self.serial_n, freq=self.freq, addr=self.addr, power=self.power, rssi=self.rssi)
 
     def send_deal(self, msg, receiverID):
-        self.node.addr_temp = self.node.addr
+        # self.node.addr_temp = self.node.addr
         self.node.set(self.node.freq, receiverID, self.node.power, self.node.rssi)
         self.node.send(msg)
         # time.sleep(0.2)
-        self.node.set(self.node.freq, self.node.addr, self.node.power, self.node.rssi)
+        # self.node.set(self.node.freq, self.node.addr, self.node.power, self.node.rssi)
 
     def receive_data(self):
         while True:
@@ -349,7 +349,7 @@ class loraWan:
             """
 
         data = self.receive_data()
-        if int(data['payload']) != 0:
+        if data['payload'] != "0":
             d_est = d_ref * (10 ** (-(int(data['rssi']) - power_ref) / (10 * path_loss_exp)))
             logging.info("Current RSSI: " + str(data['rssi']))
             logging.info("Power Reference at 1m: " + str(power_ref))
@@ -360,7 +360,7 @@ class loraWan:
                     broker_cfg = yml.read_yaml("broker_key.yml")
                     if bool(broker_cfg):
                         logging.info(f"Key Found {broker_cfg['current_key']}")
-                        self.send_deal(broker_cfg['current_key'], 100)
+                        self.send_deal(broker_cfg['current_key'].decode(), 100)
                 else:
                     logging.info(f"Device is out of range! ")
             except IOError as e:

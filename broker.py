@@ -49,13 +49,6 @@ if __name__ == "__main__":
     # get key distribution timing
     kd_config = yml.read_key_distribution_timing('mode.yml')
 
-    # Start the Bluetooth Service
-    bleSvr = bleServer()
-    if mode_config["mode"] == "BL":
-        bleSvr.start()
-    # elif mode_config["mode"] == "LORA":
-    #     lr = loraWan("/dev/ttyS0", 433, 0, 22, True)
-    #     lora_thread = threading.Thread(target=lr.receive_data())
     # create listeners
     try:
         for listener_config in listener_configs:
@@ -65,7 +58,7 @@ if __name__ == "__main__":
                 else:
                     raise SyntaxError
             elif listener_config.tls == 0:
-                LISTENERS.append(Listener(listener_config, bleSvr, mode_config, kd_config, ip=HOSTNAME, debug=logger.DEBUG, subscription_manager=subscription_manager, client_manager=client_manager))
+                LISTENERS.append(Listener(listener_config, mode_config, kd_config, ip=HOSTNAME, debug=logger.DEBUG, subscription_manager=subscription_manager, client_manager=client_manager))
             else:
                 raise ValueError
     except SyntaxError:

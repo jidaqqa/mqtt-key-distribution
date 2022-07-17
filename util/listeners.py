@@ -2,12 +2,13 @@ import socket
 import threading
 import ssl
 from apscheduler.schedulers.background import BackgroundScheduler
+
+from util import hci_rssi
 from util.mqtt_packet_manager import MQTTPacketManager
 import util.logger as logger
 from util.exceptions import MQTTMessageNotSupportedException
 from util.client_manager import *
 import util.enums as enums
-from util import hci_rssi
 from util.yaml_config_rw import *
 from util.fernet_cha_xtea import *
 from util.lora_wan import loraWan
@@ -35,7 +36,6 @@ class ClientThread(threading.Thread):
         self.debug = debug
         self.client_id = ''
         self._mode_config = mode_config
-        self._ble_server = bleserver
 
     @property
     def running(self):
@@ -68,43 +68,22 @@ class ClientThread(threading.Thread):
             connack_msg = MQTTPacketManager.prepare_connack(parsed_msg)
             self.client_socket.send(connack_msg)
             logger.logging.info(f"Sent CONNACK to client {parsed_msg['client_id']}.")
-            yml = YmalReader()
+
             mode = self._mode_config['mode']
             d_ref = self._mode_config['d_ref']
             power_ref = self._mode_config['power_ref']
             path_loss_exp = self._mode_config['path_loss_exp']
             key_range = self._mode_config['key_range']
 
-            # if parsed_msg['username'] != "":
-            # logging.info(f"Username not empty! {parsed_msg['username']}")
             if mode == "BL":
-                clientInfo = self._ble_server.acceptBluetoothConnection()
-                key_required = int(self._ble_server.receive())
-                if key_required != 0:
-                    bt_rssi = hci_rssi.RSSI(clientInfo[0])
-                    current_rssi = bt_rssi.get_rssi()
-                    d_est = bt_rssi.estimate_distance(current_rssi, (d_ref, power_ref, path_loss_exp))
-                    logging.info("Current RSSI: " + str(current_rssi))
-                    logging.info("Power Reference at 1m: " + str(power_ref))
-                    logging.info(f"Estimated distance in meters is: {d_est} ")
-                    try:
-                        if d_est <= key_range:
-                            broker_cfg = yml.read_yaml("broker_key.yml")
-                            if bool(broker_cfg):
-                                logging.info(f"Key Found {broker_cfg['current_key']}")
-                                self._ble_server.sendData(broker_cfg['current_key'])
-                        else:
-                            logging.info(f"Device {clientInfo[0]} is out of range! ")
-                            self._ble_server.closeClientSocket()
-                    except IOError as e:
-                        logging.info(e)
+               hci_rssi.estimate_distance(d_ref, power_ref, path_loss_exp, key_range)
 
             elif mode == "WIFI":
                 rssi_value = float(parsed_msg['username'])
                 logging.info(f"Received WIFI RSSI: {rssi_value}")
 
             elif mode == "LORA":
-                lr = loraWan("/dev/ttyS0", 433, 0, 22, True)
+                lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
                 lr.distance_est(d_ref, power_ref, path_loss_exp, key_range)
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
