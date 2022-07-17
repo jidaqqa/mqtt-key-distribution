@@ -356,7 +356,7 @@ class Listener(object):
                 client_socket, client_address = self.sock.accept()
                 if client_socket and client_address:
                     client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager,
-                                                 self._client_manager, self._multilateral, self._mode_config, self._bleserver, self.debug)
+                                                 self._client_manager, self._multilateral, self._mode_config, self.debug)
                     self.open_sockets[client_address] = client_thread
                     client_thread.setDaemon(True)
                     client_thread.start()
