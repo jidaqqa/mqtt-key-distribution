@@ -196,7 +196,7 @@ class MQTTPacketManager(object):
                 for user_property in properties:
                     parsed_msg['properties'][user_property] = properties[user_property]
         current_pos, parsed_msg['client_id'] = MQTTPacketManager.extract_client_id(packet, current_pos)
-        current_pos, parsed_msg['username'] = MQTTPacketManager.extract_username(packet, current_pos)
+        # current_pos, parsed_msg['username'] = MQTTPacketManager.extract_username(packet, current_pos)
         return parsed_msg
 
     @staticmethod
@@ -463,22 +463,20 @@ class MQTTPacketManager(object):
             logger.logging.debug(f"\tClientID: {client_id}")
         return position, client_id
 
-    @staticmethod
-    def extract_username(packet, position):
-        if len(packet) > position:
-            length_msb = packet[position]
-            position += 1
-            length_lsb = packet[position]
-            position += 1
-            length_name = (length_msb << 4) | length_lsb
-            username = packet[position: position + length_name].decode('utf-8')
-            position += length_name
-            #    logger.logging.info(f"\tClient-Username: {username}")
-            if logger.DEBUG:
-                logger.logging.debug(f"\tClient-Username: {username}")
-            return position, username
-        else:
-            logger.logging.info("Client Already Has a Key!")
-            return position, ""
+    # @staticmethod
+    # def extract_username(packet, position):
+    #     if len(packet) > position:
+    #         length_msb = packet[position]
+    #         position += 1
+    #         length_lsb = packet[position]
+    #         position += 1
+    #         length_name = (length_msb << 4) | length_lsb
+    #         username = packet[position: position + length_name].decode('utf-8')
+    #         position += length_name
+    #         #    logger.logging.info(f"\tClient-Username: {username}")
+    #         if logger.DEBUG:
+    #             logger.logging.debug(f"\tClient-Username: {username}")
+    #         return position, username
+
 
 

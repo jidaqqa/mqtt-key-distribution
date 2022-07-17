@@ -11,7 +11,7 @@
 #power_ref : -10  # mean received power at reference distance
 #path_loss_exp : 2 # path loss exponent
 
-mode : "LORA" # Bluetooth Mode
+mode : "LORA" # LORA Mode
 d_ref : 1  # reference distance
 power_ref : -19  # mean received power at reference distance
 path_loss_exp : 2 # path loss exponent

@@ -103,6 +103,7 @@ class bleServer:
         # receive data
         dataRecv = self.recvData()
         logging.info(dataRecv)
+        return dataRecv
 
     def stop(self):
         # Disconnecting bluetooth sockets

@@ -50,8 +50,8 @@ if __name__ == "__main__":
     kd_config = yml.read_key_distribution_timing('mode.yml')
 
     # Start the Bluetooth Service
+    bleSvr = bleServer()
     if mode_config["mode"] == "BL":
-        bleSvr = bleServer()
         bleSvr.start()
     # elif mode_config["mode"] == "LORA":
     #     lr = loraWan("/dev/ttyS0", 433, 0, 22, True)

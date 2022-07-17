@@ -5,11 +5,9 @@ from util.gmqtt.client import Client as MQTTClient
 import argparse
 import random
 import ssl
-import logging
 import warnings
 import uvloop
 import signal
-from util.bluetooth_tech import BluetoothTech
 from util.yaml_config_rw import YmalReader
 from util.fernet_cha_xtea import *
 from util.bleClient import *
@@ -110,19 +108,21 @@ async def main(args):
 
     # if both are not specified, then connect via insecure channel
     elif not args.cert and not args.key:
-        if mode == "BL" and key_cfg['current_key'] == "":
-            logging.info("Bluetooth Mode!")
-            temp = subprocess.check_output(['hcitool', 'dev'])
-            device_info = temp.decode('utf-8').split()
-            client.set_auth_credentials(device_info[2])
-        elif mode == "WIFI" and key_cfg['current_key'] == "":
-            output = subprocess.check_output(['iwgetid'])
-            interface = output.decode().split()[0]
-            APSSID = output.decode().split()[1]
-            rssi_scanner = rssi.RSSI_Scan(interface)
-            ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
-            logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
-            client.set_auth_credentials(ap_info[0]['signal'])
+        # if mode == "BL" and key_cfg['current_key'] == "":
+        #     logging.info("Bluetooth Mode!")
+        #     temp = subprocess.check_output(['hcitool', 'dev'])
+        #     device_info = temp.decode('utf-8').split()
+        #     client.set_auth_credentials(device_info[2])
+        # elif mode == "WIFI" and key_cfg['current_key'] == "":
+        #     output = subprocess.check_output(['iwgetid'])
+        #     interface = output.decode().split()[0]
+        #     APSSID = output.decode().split()[1]
+        #     rssi_scanner = rssi.RSSI_Scan(interface)
+        #     ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
+        #     logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
+        #     client.set_auth_credentials(ap_info[0]['signal'])
+        # elif mode == "LORA" and key_cfg['current_key'] == "":
+        #     client.set_auth_credentials("LORA")
         await client.connect(host=args.host, port=args.port)
 
     # if only one of them is specified, print error and exit
@@ -160,14 +160,14 @@ async def main(args):
             logging.info("Reading client key from failed or does not exist")
             if mode == "BL":
                 bleClnt = bleClient()
-                bleClnt.start()
+                bleClnt.start(0)
                 key_cfg['current_key'] = bleClnt.receive()
                 logging.info(key_cfg["current_key"])
                 yml.write_yaml('client_key.yml', key_cfg)
                 bleClnt.stop()
             elif mode == "LORA":
                 lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
-                lr.send_deal()
+                lr.send_deal("LoraWAN", 0)
     await STOP.wait()
     try:
         await client.disconnect(session_expiry_interval=0)

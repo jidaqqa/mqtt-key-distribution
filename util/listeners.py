@@ -75,17 +75,18 @@ class ClientThread(threading.Thread):
             path_loss_exp = self._mode_config['path_loss_exp']
             key_range = self._mode_config['key_range']
 
-            if parsed_msg['username'] != "":
-                # logging.info(f"Username not empty! {parsed_msg['username']}")
-                if mode == "BL":
-                    clientInfo = self._ble_server.acceptBluetoothConnection()
+            # if parsed_msg['username'] != "":
+            # logging.info(f"Username not empty! {parsed_msg['username']}")
+            if mode == "BL":
+                clientInfo = self._ble_server.acceptBluetoothConnection()
+                key_required = int(self._ble_server.receive())
+                if key_required != 0:
                     bt_rssi = hci_rssi.RSSI(clientInfo[0])
                     current_rssi = bt_rssi.get_rssi()
                     d_est = bt_rssi.estimate_distance(current_rssi, (d_ref, power_ref, path_loss_exp))
                     logging.info("Current RSSI: " + str(current_rssi))
                     logging.info("Power Reference at 1m: " + str(power_ref))
                     logging.info(f"Estimated distance in meters is: {d_est} ")
-
                     try:
                         if d_est <= key_range:
                             broker_cfg = yml.read_yaml("broker_key.yml")
@@ -98,13 +99,13 @@ class ClientThread(threading.Thread):
                     except IOError as e:
                         logging.info(e)
 
-                elif mode == "WIFI":
-                    rssi_value = float(parsed_msg['username'])
-                    logging.info(f"Received WIFI RSSI: {rssi_value}")
+            elif mode == "WIFI":
+                rssi_value = float(parsed_msg['username'])
+                logging.info(f"Received WIFI RSSI: {rssi_value}")
 
-                elif mode == "LORA":
-                    lr = loraWan("/dev/ttyS0", 433, 0, 22, True)
-                    lr.distance_est(d_ref, power_ref, path_loss_exp)
+            elif mode == "LORA":
+                lr = loraWan("/dev/ttyS0", 433, 0, 22, True)
+                lr.distance_est(d_ref, power_ref, path_loss_exp, key_range)
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()

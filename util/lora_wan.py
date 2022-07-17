@@ -6,10 +6,9 @@ import logging
 # This is the main class file that is often used for LoRa parameters settings
 
 import RPi.GPIO as GPIO
-import numpy as np
 import serial
 import time
-import datetime
+from util.yaml_config_rw import *
 
 
 class sx126x:
@@ -326,9 +325,9 @@ class loraWan:
         self.send_to = addr
         self.node = sx126x(serial_num=self.serial_n, freq=self.freq, addr=self.addr, power=self.power, rssi=self.rssi)
 
-    def send_deal(self, msg):
+    def send_deal(self, msg, receiverID):
         self.node.addr_temp = self.node.addr
-        self.node.set(self.node.freq, 100, self.node.power, self.node.rssi)
+        self.node.set(self.node.freq, receiverID, self.node.power, self.node.rssi)
         self.node.send(msg)
         # time.sleep(0.2)
         self.node.set(self.node.freq, self.node.addr, self.node.power, self.node.rssi)
@@ -340,7 +339,7 @@ class loraWan:
                 break
         return data
 
-    def distance_est(self, d_ref, power_ref, path_loss_exp):
+    def distance_est(self, d_ref, power_ref, path_loss_exp, key_range):
         """This function returns an estimated distance range
                given a single radio signal strength (RSS) reading
                (received power measurement) in dBm.
@@ -348,8 +347,20 @@ class loraWan:
                 (d_est): float values containing
                     the estimated distancein meters rounded to two decimal points
             """
+
         data = self.receive_data()
         d_est = d_ref * (10 ** (-(int(data['rssi']) - power_ref) / (10 * path_loss_exp)))
         logging.info("Current RSSI: " + str(data['rssi']))
         logging.info("Power Reference at 1m: " + str(power_ref))
         logging.info(f"Estimated distance in meters is: {d_est} ")
+        yml = YmalReader()
+        try:
+            if d_est <= key_range:
+                broker_cfg = yml.read_yaml("broker_key.yml")
+                if bool(broker_cfg):
+                    logging.info(f"Key Found {broker_cfg['current_key']}")
+                    self.send_deal(broker_cfg['current_key'], 100)
+            else:
+                logging.info(f"Device is out of range! ")
+        except IOError as e:
+            logging.info(e)
