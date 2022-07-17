@@ -22,7 +22,7 @@ class ClientThread(threading.Thread):
     """
 
     def __init__(self, client_socket, client_address, listener, subscription_manager, client_manager, multilateral,
-                 mode_config, bleserver ,debug, tls=0):
+                 mode_config, debug, tls=0):
         super().__init__()
         self.client_socket = client_socket
         self.client_address = client_address
@@ -288,7 +288,7 @@ class Listener(object):
     MQTT Listener. No security mechanisms in place.
     """
 
-    def __init__(self, config, bleserver, mode_config, kd_config, subscription_manager, client_manager, ip, debug=0):
+    def __init__(self, config, mode_config, kd_config, subscription_manager, client_manager, ip, debug=0):
         """
         Constructor for the MQTT Listener
         :param config: contains the initialized config setting
@@ -309,7 +309,6 @@ class Listener(object):
         self._client_manager = client_manager
         self._mode_config = mode_config
         self._kd_config = kd_config
-        self._bleserver = bleserver
 
     def __str__(self):
         return f"MQTT Listener: [Port: {self._port}, Multilateral Security: {self._multilateral}]"

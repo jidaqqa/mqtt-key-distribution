@@ -1,5 +1,4 @@
 import argparse
-from util.bleServer import *
 from util.subscription_manager import SubscriptionManager
 import util.logger as logger
 from util.listeners import *
@@ -98,5 +97,4 @@ if __name__ == "__main__":
             LISTENERS[index].close_sockets()
         if mode_config["mode"] == "BL":
             logger.logging.info("Closing Bluetooth service.")
-            bleSvr.stop()
         logger.logging.info("Broker shutdown complete.")

@@ -3,8 +3,8 @@ import subprocess
 import time
 import statistics
 import numpy as np
-from bleServer import *
-from yaml_config_rw import *
+from util.bleServer import bleServer
+from util.yaml_config_rw import *
 
 
 def get_rssi(addr):
