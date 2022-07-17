@@ -17,7 +17,11 @@ def get_rssi(addr):
             reading = reading.split(' flags')[0]
             reading = int(reading)
             read_lst.append(reading)
-        return read_lst[0]
+        if len(read_lst) > 0:
+            return read_lst[0]
+        else:
+            logging.info("Make sure your device is discoverable, disconnect and connect again!")
+            return None
     except SystemError as e:
         logging.info("Make sure your device is discoverable, disconnect and connect again!")
 
@@ -28,6 +32,7 @@ def estimate_distance(d_ref, power_ref, path_loss_exp, key_range):
        (received power measurement) in dBm.
     """
     bleSvr = bleServer()
+    bleSvr.start()
     clientInfo = bleSvr.acceptBluetoothConnection()
     key_required = bleSvr.receive()
     if key_required != "0":
