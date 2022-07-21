@@ -339,6 +339,13 @@ class loraWan:
                 break
         return data
 
+    def receive_data_to_file(self):
+        while True:
+            data = self.node.receive()
+            if data is not None:
+                with open('lora.txt', 'a') as f:
+                    f.writelines('\n'.join(data))
+
     def distance_est(self, d_ref, power_ref, path_loss_exp, key_range):
         """This function returns an estimated distance range
                given a single radio signal strength (RSS) reading
@@ -382,3 +389,10 @@ class loraWan:
                     logging.info(f"Device is out of range! ")
             except IOError as e:
                 logging.info(e)
+
+
+# lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
+# lr.receive_data_to_file()
+#
+# while True:
+#     lr.send_deal("RSSI", 100)
