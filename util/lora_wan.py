@@ -345,6 +345,7 @@ class loraWan:
             if data is not None:
                 with open('lora.txt', 'a') as f:
                     f.writelines('\n'.join(data))
+                f.close()
 
     def distance_est(self, d_ref, power_ref, path_loss_exp, key_range):
         """This function returns an estimated distance range
