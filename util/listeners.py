@@ -70,13 +70,13 @@ class ClientThread(threading.Thread):
             logger.logging.info(f"Sent CONNACK to client {parsed_msg['client_id']}.")
 
             mode = self._mode_config['mode']
-            d_ref = self._mode_config['d_ref']
-            power_ref = self._mode_config['power_ref']
-            path_loss_exp = self._mode_config['path_loss_exp']
-            key_range = self._mode_config['key_range']
+            # d_ref = self._mode_config['d_ref']
+            # power_ref = self._mode_config['power_ref']
+            # path_loss_exp = self._mode_config['path_loss_exp']
+            # key_range = self._mode_config['key_range']
 
             if mode == "BL":
-               hci_rssi.estimate_distance(d_ref, power_ref, path_loss_exp, key_range)
+                hci_rssi.check_range(self._mode_config['max_power'], self._mode_config['min_power'])
 
             elif mode == "WIFI":
                 rssi_value = float(parsed_msg['username'])
@@ -84,7 +84,8 @@ class ClientThread(threading.Thread):
 
             elif mode == "LORA":
                 lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
-                lr.distance_est(d_ref, power_ref, path_loss_exp, key_range)
+                lr.check_range(self._mode_config['max_power'], self._mode_config['min_power'])
+                # lr.distance_est(d_ref, power_ref, path_loss_exp, key_range)
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()
@@ -347,7 +348,8 @@ class Listener(object):
                 yml.write_yaml('./broker_key.yml', broker_key)
 
         scheduler = BackgroundScheduler()
-        scheduler.add_job(self.handle_key_distribution, 'interval', days=self._kd_config["days"], hours=self._kd_config['hours'],
+        scheduler.add_job(self.handle_key_distribution, 'interval', days=self._kd_config["days"],
+                          hours=self._kd_config['hours'],
                           minutes=self._kd_config['minutes'], seconds=self._kd_config['seconds'])
         logging.getLogger('apscheduler').setLevel(logging.WARN)
         scheduler.start()
@@ -356,7 +358,8 @@ class Listener(object):
                 client_socket, client_address = self.sock.accept()
                 if client_socket and client_address:
                     client_thread = ClientThread(client_socket, client_address, self, self._subscription_manager,
-                                                 self._client_manager, self._multilateral, self._mode_config, self.debug)
+                                                 self._client_manager, self._multilateral, self._mode_config,
+                                                 self.debug)
                     self.open_sockets[client_address] = client_thread
                     client_thread.setDaemon(True)
                     client_thread.start()

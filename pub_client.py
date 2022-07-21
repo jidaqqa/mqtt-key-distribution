@@ -150,6 +150,13 @@ async def main(args):
                 bleClnt.stop()
             elif mode == "LORA":
                 lr.send_deal("0", 100)
+            elif mode == "WIFI":
+                output = subprocess.check_output(['iwgetid'])
+                interface = output.decode().split()[0]
+                APSSID = output.decode().split()[1]
+                rssi_scanner = rssi.RSSI_Scan(interface)
+                ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
+                logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
 
             if mode_cfg['encryption'] == 0:
                 logging.info(f"Publishing '{args.topic}:{args.message}'")

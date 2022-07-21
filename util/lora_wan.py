@@ -365,3 +365,20 @@ class loraWan:
                     logging.info(f"Device is out of range! ")
             except IOError as e:
                 logging.info(e)
+
+    def check_range(self, max_power, min_power):
+
+        data = self.receive_data()
+        if data['payload'] != "0":
+            logging.info("Current RSSI: " + str(data['rssi']))
+            yml = YmalReader()
+            try:
+                if data['rssi'] >= min_power or data['rssi'] <= max_power:
+                    broker_cfg = yml.read_yaml("broker_key.yml")
+                    if bool(broker_cfg):
+                        logging.info(f"Key Found {broker_cfg['current_key']}")
+                        self.send_deal(broker_cfg['current_key'].decode(), 100)
+                else:
+                    logging.info(f"Device is out of range! ")
+            except IOError as e:
+                logging.info(e)
