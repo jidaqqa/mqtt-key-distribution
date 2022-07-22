@@ -50,10 +50,12 @@ def on_message(client, topic, payload, qos, properties):
     elif mode_cfg['encryption'] == 1:
         xtea_instance = FernetXtea(key)
         plaintext = xtea_instance.decrypt(payload)
+        logging.info(f"Publish Message received at {time.time()}")
         logging.info(f'[RECV MSG] {topic}:{plaintext}')
     elif mode_cfg['encryption'] == 2:
         cha_instance = FernetChaCha20Poly1305(key)
         plaintext = cha_instance.decrypt(payload)
+        logging.info(f"Publish Message received at {time.time()}")
         logging.info(f'[RECV MSG] {topic}:{plaintext}')
 
 

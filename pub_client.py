@@ -160,14 +160,17 @@ async def main(args):
 
             if mode_cfg['encryption'] == 0:
                 logging.info(f"Publishing '{args.topic}:{args.message}'")
+                logging.info(f"Publish Message sent at {time.time()}")
                 client.publish(args.topic, args.message, qos=0)
             elif mode_cfg['encryption'] == 1:
                 xtea_instance = FernetXtea(key_cfg['current_key'])
+                logging.info(f"Publish Message sent at {time.time()}")
                 ciphertext = xtea_instance.encrypt(bytes(args.message.encode()))
                 logging.info(f"Publishing encrypted message using Xtea for '{args.topic}'")
                 client.publish(args.topic, ciphertext, qos=0)
             elif mode_cfg['encryption'] == 2:
                 cha_instance = FernetChaCha20Poly1305(key_cfg['current_key'])
+                logging.info(f"Publish Message sent at {time.time()}")
                 ciphertext = cha_instance.encrypt(args.message)
                 logging.info(f"Publishing encrypted message using ChaCha20Poly1305 for '{args.topic}'")
                 client.publish(args.topic, ciphertext, qos=0)
