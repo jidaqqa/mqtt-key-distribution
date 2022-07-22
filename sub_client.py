@@ -3,18 +3,17 @@ import subprocess
 
 import rssi
 
-from util.bluetooth_tech import BluetoothTech
 from util.gmqtt.client import Client as MQTTClient
 import argparse
 import random
 import ssl
-import logging
 import warnings
 import uvloop
 import signal
 from util.fernet_cha_xtea import *
 from util.yaml_config_rw import YmalReader
 from util.bleClient import *
+from util.lora_wan import loraWan
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 STOP = asyncio.Event()
@@ -158,18 +157,18 @@ async def main(args):
 
     # if both are not specified, then connect via insecure channel
     elif not args.cert and not args.key:
-        if mode == "BL" and key_cfg['current_key'] == "":
-            temp = subprocess.check_output(['hcitool', 'dev'])
-            device_info = temp.decode('utf-8').split()
-            client.set_auth_credentials(device_info[2])
-        elif mode == "WIFI" and key_cfg['current_key'] == "":
-            output = subprocess.check_output(['iwgetid'])
-            interface = output.decode().split()[0]
-            APSSID = output.decode().split()[1]
-            rssi_scanner = rssi.RSSI_Scan(interface)
-            ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
-            logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
-            client.set_auth_credentials(ap_info[0]['signal'])
+        # if mode == "BL" and key_cfg['current_key'] == "":
+        #     temp = subprocess.check_output(['hcitool', 'dev'])
+        #     device_info = temp.decode('utf-8').split()
+        #     client.set_auth_credentials(device_info[2])
+        # elif mode == "WIFI" and key_cfg['current_key'] == "":
+        #     output = subprocess.check_output(['iwgetid'])
+        #     interface = output.decode().split()[0]
+        #     APSSID = output.decode().split()[1]
+        #     rssi_scanner = rssi.RSSI_Scan(interface)
+        #     ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
+        #     logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
+        #     client.set_auth_credentials(ap_info[0]['signal'])
         await client.connect(host=args.host, port=args.port)
 
     # if only one of them is specified, print error and exit
@@ -189,27 +188,41 @@ async def main(args):
                 logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
                 client.subscribe(args.topic + f"{i}", qos=0, subscription_identifier=1)
     else:
+        lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
         if key_cfg['current_key'] != "":
+            if mode == "BL":
+                bleClnt = bleClient()
+                bleClnt.start("0")
+                bleClnt.stop()
+            elif mode == "LORA":
+                lr.send_deal("0", 100)
+            elif mode == "WIFI":
+                output = subprocess.check_output(['iwgetid'])
+                interface = output.decode().split()[0]
+                APSSID = output.decode().split()[1]
+                rssi_scanner = rssi.RSSI_Scan(interface)
+                ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
+                logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
             logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
             client.subscribe(args.topic, qos=0, subscription_identifier=1)
 
         else:
             logging.info("Reading client key from failed or does not exist")
             if mode == "BL":
-                # data = BluetoothTech.receivemessages()
-                # key_cfg['current_key'] = data
-                # logging.info(key_cfg["current_key"])
-                # yml.write_yaml('client_key.yml', key_cfg)
                 bleClnt = bleClient()
-                bleClnt.start()
+                bleClnt.start("1")
                 key_cfg['current_key'] = bleClnt.receive()
+                logging.info(f"Key received at {time.time()}")
                 logging.info(key_cfg["current_key"])
                 yml.write_yaml('client_key.yml', key_cfg)
                 bleClnt.stop()
-                logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
-                client.subscribe(args.topic, qos=0, subscription_identifier=1)
-            elif mode == "WIFI":
-                logging.info("WIFI Mode")
+            elif mode == "LORA":
+                lr.send_deal("1", 100)
+                data = lr.receive_data()
+                logging.info(f"Key received at {time.time()}")
+                key_cfg['current_key'] = data['payload']
+                logging.info(key_cfg["current_key"])
+                yml.write_yaml('client_key.yml', key_cfg)
 
     await STOP.wait()
     try:

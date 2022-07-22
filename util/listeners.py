@@ -70,10 +70,6 @@ class ClientThread(threading.Thread):
             logger.logging.info(f"Sent CONNACK to client {parsed_msg['client_id']}.")
 
             mode = self._mode_config['mode']
-            # d_ref = self._mode_config['d_ref']
-            # power_ref = self._mode_config['power_ref']
-            # path_loss_exp = self._mode_config['path_loss_exp']
-            # key_range = self._mode_config['key_range']
 
             if mode == "BL":
                 hci_rssi.check_range(self._mode_config['min_power'])
@@ -85,7 +81,6 @@ class ClientThread(threading.Thread):
             elif mode == "LORA":
                 lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
                 lr.check_range(self._mode_config['min_power'])
-                # lr.distance_est(d_ref, power_ref, path_loss_exp, key_range)
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()
@@ -352,7 +347,7 @@ class Listener(object):
                           hours=self._kd_config['hours'],
                           minutes=self._kd_config['minutes'], seconds=self._kd_config['seconds'])
         logging.getLogger('apscheduler').setLevel(logging.WARN)
-        scheduler.start()
+        #scheduler.start()
         while self._running:
             try:
                 client_socket, client_address = self.sock.accept()
