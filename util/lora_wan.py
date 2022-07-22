@@ -344,7 +344,8 @@ class loraWan:
             data = self.node.receive()
             if data is not None:
                 with open('lora.txt', 'a') as f:
-                    f.writelines('\n'.join(data))
+                    f.write("\n")
+                    f.write(str(data['rssi']))
                 f.close()
 
     def distance_est(self, d_ref, power_ref, path_loss_exp, key_range):

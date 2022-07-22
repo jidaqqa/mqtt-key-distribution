@@ -80,6 +80,25 @@ def check_range(min_power):
 
     bleSvr.stop()
 
+
+def check_range_test():
+    bleSvr = bleServer()
+    bleSvr.start()
+    clientInfo = bleSvr.acceptBluetoothConnection()
+
+    count = 0
+    while True:
+        current_rssi = get_rssi(clientInfo[0])
+        if current_rssi is not None:
+            print(f"Current RSSI: {str(current_rssi)}")
+            with open('bl.txt', 'a') as f:
+                f.write(str(current_rssi))
+                f.write("\n")
+            count = count + 1
+            if count == 20:
+                break
+
+
 # class RSSI:
 
 # def __init__(self):
@@ -111,4 +130,4 @@ def check_range(min_power):
 
 
 # if __name__ == '__main__':
-#    print(get_rssi('E8:5A:8B:9E:EE:D8'))
+#     check_range_test()
