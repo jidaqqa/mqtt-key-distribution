@@ -26,6 +26,7 @@ def get_rssi(addr):
         logging.info("Make sure your device is discoverable, disconnect and connect again!")
 
 
+
 def estimate_distance(d_ref, power_ref, path_loss_exp, key_range):
     """This function returns an estimated distance range
        given a single radio signal strength (RSS) reading

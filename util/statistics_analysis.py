@@ -1,7 +1,10 @@
 import statistics
 import numpy as np
 
-with open('./lora_rssi_1m') as f:
+# file_path = "./lora_rssi_1m"
+file_path = "./bl_rssi_1m"
+
+with open(file_path) as f:
     lines = f.readlines()
 
 rssi_values = []
@@ -17,8 +20,10 @@ print(np.round_(meanValue, 2))
 variance = statistics.variance(rssi_values, meanValue)
 print(np.round_(variance, 2))
 
-mean_variance_low = meanValue - variance*2
-mean_variance_high = meanValue + variance*2
+# mean_variance_low = meanValue - variance*2
+# mean_variance_high = meanValue + variance*2
+mean_variance_low = meanValue - variance
+mean_variance_high = meanValue + variance
 print(np.round_(mean_variance_low, 2))
 print(np.round_(mean_variance_high, 2))
 

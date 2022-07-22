@@ -99,7 +99,7 @@ class bleServer:
         # advertising bluetooth services
         self.advertiseBluetoothService()
         # Accepting bluetooth connection
-        #self.acceptBluetoothConnection()
+        # self.acceptBluetoothConnection()
 
     def receive(self):
         # receive data
@@ -153,7 +153,11 @@ if __name__ == '__main__':
 
     count = 0
     while True:
-        current_rssi = bleSvr.get_rssi(clientInfo[0])
+        try:
+            current_rssi = bleSvr.get_rssi(clientInfo[0])
+        except SystemError as e:
+            logging.info("RSSI Value No Found!")
+            continue
         if current_rssi is not None:
             print(f"Current RSSI: {str(current_rssi)}")
             with open('bl.txt', 'a') as f:
