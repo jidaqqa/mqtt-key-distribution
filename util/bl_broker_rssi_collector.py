@@ -1,6 +1,6 @@
 import logging
 import subprocess
-
+import time
 from bluetooth import *  # Python Bluetooth library
 
 
@@ -99,7 +99,7 @@ class bleServer:
         # advertising bluetooth services
         self.advertiseBluetoothService()
         # Accepting bluetooth connection
-        # self.acceptBluetoothConnection()
+        #self.acceptBluetoothConnection()
 
     def receive(self):
         # receive data
@@ -163,10 +163,13 @@ if __name__ == '__main__':
             with open('bl.txt', 'a') as f:
                 f.write(str(current_rssi))
                 f.write("\n")
+            #bleSvr.sendData(str(count))
             count = count + 1
             if count == 20:
-                bleSvr.start()
+                bleSvr.sendData(str(count))
+                bleSvr.stop()
                 break
+        time.sleep(3)
 
     # bleSvr.receive()
     # bleSvr.stop()

@@ -67,8 +67,8 @@ class bleClient:
         try:
             while True:
                 data = self.clientSocket.recv(1024)
-                if not data:
-                    break
+                #if not data:
+                #    break
                 return data.decode()
             logging.info("Data received successfully over bluetooth connection")
             return data
@@ -123,5 +123,5 @@ if __name__ == '__main__':
     logging.info("Setup logging configuration")
     bleClnt = bleClient()
     bleClnt.start("0")
-    # bleClnt.receive()
+    bleClnt.receive()
     # bleClnt.stop()

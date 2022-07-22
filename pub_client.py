@@ -177,12 +177,14 @@ async def main(args):
                 bleClnt = bleClient()
                 bleClnt.start("1")
                 key_cfg['current_key'] = bleClnt.receive()
+                logging.info(f"Key received at {time.time()}")
                 logging.info(key_cfg["current_key"])
                 yml.write_yaml('client_key.yml', key_cfg)
                 bleClnt.stop()
             elif mode == "LORA":
                 lr.send_deal("1", 100)
                 data = lr.receive_data()
+                logging.info(f"Key received at {time.time()}")
                 #if mode_cfg['encryption'] == 1:
                 key_cfg['current_key'] = data['payload']
                 logging.info(key_cfg["current_key"])

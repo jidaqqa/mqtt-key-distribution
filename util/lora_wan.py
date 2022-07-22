@@ -386,6 +386,7 @@ class loraWan:
                     broker_cfg = yml.read_yaml("broker_key.yml")
                     if bool(broker_cfg):
                         logging.info(f"Key Found {broker_cfg['current_key']}")
+                        logging.info(f"Key sent at {time.time()}")
                         self.send_deal(broker_cfg['current_key'].decode(), 100)
                 else:
                     logging.info(f"Device is out of range! ")

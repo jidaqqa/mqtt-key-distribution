@@ -74,6 +74,7 @@ def check_range(min_power):
                 broker_cfg = yml.read_yaml("broker_key.yml")
                 if bool(broker_cfg):
                     logging.info(f"Key Found {broker_cfg['current_key']}")
+                    logging.info(f"Key sent at {time.time()}")
                     bleSvr.sendData(broker_cfg['current_key'])
             else:
                 logging.info(f"Device {clientInfo[0]} is out of range! ")
