@@ -15,10 +15,9 @@
 
 mode : "LORA" # LORA Mode
 d_ref : 1  # reference distance
-power_ref : -52  # mean received power at reference distance
+power_ref : -31  # mean received power at reference distance
 path_loss_exp : 2 # path loss exponent
 key_renew_timing : '0/0/3/0' # Example days/hours/minutes/seconds
 encryption : 1 # 0=No Encryption, 1=Encryption Using Xtea, 2=Encryption Using ChaCha20Poly1305
 key_range : 10 # The range that a device is accepted to receive a key in m
-max_power: -100
-min_power: -1
+min_power: -31

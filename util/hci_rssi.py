@@ -55,7 +55,7 @@ def estimate_distance(d_ref, power_ref, path_loss_exp, key_range):
     bleSvr.stop()
 
 
-def check_range(max_power, min_power):
+def check_range(min_power):
     """This function returns an estimated range depending on
        given a single radio signal strength (RSS) reading
        (received power measurement) in dBm.
@@ -68,7 +68,7 @@ def check_range(max_power, min_power):
         current_rssi = get_rssi(clientInfo[0])
         if current_rssi is not None:
             logging.info("Current RSSI: " + str(current_rssi))
-            if current_rssi >= min_power or current_rssi <= max_power:
+            if current_rssi >= min_power:
                 yml = YmalReader()
                 broker_cfg = yml.read_yaml("broker_key.yml")
                 if bool(broker_cfg):

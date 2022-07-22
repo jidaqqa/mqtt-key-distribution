@@ -76,7 +76,7 @@ class ClientThread(threading.Thread):
             # key_range = self._mode_config['key_range']
 
             if mode == "BL":
-                hci_rssi.check_range(self._mode_config['max_power'], self._mode_config['min_power'])
+                hci_rssi.check_range(self._mode_config['min_power'])
 
             elif mode == "WIFI":
                 rssi_value = float(parsed_msg['username'])
@@ -84,7 +84,7 @@ class ClientThread(threading.Thread):
 
             elif mode == "LORA":
                 lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
-                lr.check_range(self._mode_config['max_power'], self._mode_config['min_power'])
+                lr.check_range(self._mode_config['min_power'])
                 # lr.distance_est(d_ref, power_ref, path_loss_exp, key_range)
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
