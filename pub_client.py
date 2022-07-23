@@ -144,19 +144,19 @@ async def main(args):
     else:
         lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
         if key_cfg['current_key'] != "":
-            if mode == "BL":
-                bleClnt = bleClient()
-                bleClnt.start("0")
-                bleClnt.stop()
-            elif mode == "LORA":
-                lr.send_deal("0", 100)
-            elif mode == "WIFI":
-                output = subprocess.check_output(['iwgetid'])
-                interface = output.decode().split()[0]
-                APSSID = output.decode().split()[1]
-                rssi_scanner = rssi.RSSI_Scan(interface)
-                ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
-                logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
+            # if mode == "BL":
+            #     bleClnt = bleClient()
+            #     bleClnt.start("0")
+            #     bleClnt.stop()
+            # elif mode == "LORA":
+            #     lr.send_deal("0", 100)
+            # elif mode == "WIFI":
+            #     output = subprocess.check_output(['iwgetid'])
+            #     interface = output.decode().split()[0]
+            #     APSSID = output.decode().split()[1]
+            #     rssi_scanner = rssi.RSSI_Scan(interface)
+            #     ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
+            #     logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
 
             if mode_cfg['encryption'] == 0:
                 logging.info(f"Publishing '{args.topic}:{args.message}'")
@@ -202,7 +202,7 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
     warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-    HOSTNAME = "172.18.0.101"
+    HOSTNAME = "172.18.0.103"
     PORT = 1883
     CLIENT_ID = str(random.randint(0,50000))
 

@@ -1,14 +1,14 @@
-mode : "BL" # Bluetooth Mode
-key_renew_timing : '0/0/3/0' # Example days/hours/minutes/seconds
-encryption : 1 # 0=No Encryption, 1=Encryption Using Xtea, 2=Encryption Using ChaCha20Poly1305
-min_power: -86
+#mode : "BL" # Bluetooth Mode
+#key_renew_timing : '0/0/3/0' # Example days/hours/minutes/seconds
+#encryption : 1 # 0=No Encryption, 1=Encryption Using Xtea, 2=Encryption Using ChaCha20Poly1305
+#min_power: -86
 
 #mode : "WIFI" # WIFI Mode
 #d_ref : 1  # reference distance
 #power_ref : -10  # mean received power at reference distance
 #path_loss_exp : 2 # path loss exponent
 
-#mode : "LORA" # LORA Mode
-#key_renew_timing : '0/0/3/0' # Example days/hours/minutes/seconds
-#encryption : 1 # 0=No Encryption, 1=Encryption Using Xtea, 2=Encryption Using ChaCha20Poly1305
-#min_power: -31
+mode : "LORA" # LORA Mode
+key_renew_timing : '0/0/3/0' # Example days/hours/minutes/seconds
+encryption : 1 # 0=No Encryption, 1=Encryption Using Xtea, 2=Encryption Using ChaCha20Poly1305
+min_power: -31

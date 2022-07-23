@@ -77,8 +77,6 @@ class ClientThread(threading.Thread):
             yml = YmalReader()
             cl_list = yml.read_yaml("clients_with_keys.yml")
 
-            logging.info(self.client_address[0])
-
             if not bool(cl_list.get(self.client_address[0])):
                 if mode == "BL":
                     add_to_received_list = hci_rssi.check_range(self._mode_config['min_power'])
@@ -93,7 +91,7 @@ class ClientThread(threading.Thread):
 
             if add_to_received_list:
                 new_client = {self.client_address[0]: self.client_id}
-                yml.write_yaml("client_with_keys.yml", new_client)
+                yml.write_yaml("clients_with_keys.yml", new_client)
 
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
