@@ -1,9 +1,6 @@
 import base64
-import logging
 import subprocess
 import time
-import statistics
-import numpy as np
 from util.bleServer import bleServer
 from util.yaml_config_rw import *
 
@@ -77,11 +74,15 @@ def check_range(min_power):
                     logging.info(f"Key Found {broker_cfg['current_key']}")
                     logging.info(f"Key sent at {time.time()}")
                     bleSvr.sendData(base64.urlsafe_b64encode(broker_cfg['current_key']))
+                    bleSvr.stop()
+                    return True
+
             else:
                 logging.info(f"Device {clientInfo[0]} is out of range! ")
                 bleSvr.closeClientSocket()
+                bleSvr.stop()
+    return False
 
-    bleSvr.stop()
 
 
 def check_range_test():

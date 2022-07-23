@@ -103,6 +103,7 @@ class ClientManager(object):
             else:
                 raise IncorrectProtocolOrderException(f"Invalid protocol order: {new_status} as initial status. Expected 'FRESH'")
 
+
     def get_client_status(self, client_socket, client_address):
         """
         Returns the current status of a certain client
@@ -133,3 +134,6 @@ class ClientManager(object):
 
         """
         self._clients.remove(client)
+
+
+

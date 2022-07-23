@@ -59,7 +59,7 @@ class ClientThread(threading.Thread):
         """
 
         try:
-            client_status = self._client_manager.get_client_status(self.client_socket, self.client_address)
+
             self._client_manager.add_status(self.client_socket, self.client_address, enums.Status.CONN_RECV)
             self._client_manager.add_user_property(self.client_socket, self.client_address, parsed_msg['properties'])
             self._client_manager.add_user_property(self.client_socket, self.client_address,
@@ -71,10 +71,16 @@ class ClientThread(threading.Thread):
             logger.logging.info(f"Sent CONNACK to client {parsed_msg['client_id']}.")
 
             mode = self._mode_config['mode']
+            add_to_received_list = False
+            client_list = None
 
-            if client_status is None:
+            with open('./client_with_keys.config', 'r') as f:
+                client_list = f.readlines()
+                f.close()
+
+            if self.client_address not in client_list:
                 if mode == "BL":
-                    hci_rssi.check_range(self._mode_config['min_power'])
+                    add_to_received_list = hci_rssi.check_range(self._mode_config['min_power'])
 
                 elif mode == "WIFI":
                     rssi_value = float(parsed_msg['username'])
@@ -82,7 +88,13 @@ class ClientThread(threading.Thread):
 
                 elif mode == "LORA":
                     lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
-                    lr.check_range(self._mode_config['min_power'])
+                    add_to_received_list = lr.check_range(self._mode_config['min_power'])
+
+            if add_to_received_list:
+                with open('./client_with_keys.config', 'a') as f:
+                    f.write(self.client_address)
+                    f.write("\n")
+
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()
@@ -332,17 +344,17 @@ class Listener(object):
                 broker_key = {"current_key": new_key}
                 yml = YmalReader()
                 yml.write_yaml('./broker_key.yml', broker_key)
-        else:
-            if self._mode_config['encryption'] == 1:
-                new_key = FernetXtea.generate_key()
-                broker_key = {"current_key": new_key}
-                yml = YmalReader()
-                yml.write_yaml('./broker_key.yml', broker_key)
-            elif self._mode_config['encryption'] == 2:
-                new_key = FernetChaCha20Poly1305.generate_key()
-                broker_key = {"current_key": new_key}
-                yml = YmalReader()
-                yml.write_yaml('./broker_key.yml', broker_key)
+        # else:
+        #     if self._mode_config['encryption'] == 1:
+        #         new_key = FernetXtea.generate_key()
+        #         broker_key = {"current_key": new_key}
+        #         yml = YmalReader()
+        #         yml.write_yaml('./broker_key.yml', broker_key)
+        #     elif self._mode_config['encryption'] == 2:
+        #         new_key = FernetChaCha20Poly1305.generate_key()
+        #         broker_key = {"current_key": new_key}
+        #         yml = YmalReader()
+        #         yml.write_yaml('./broker_key.yml', broker_key)
 
         scheduler = BackgroundScheduler()
         scheduler.add_job(self.handle_key_distribution, 'interval', days=self._kd_config["days"],

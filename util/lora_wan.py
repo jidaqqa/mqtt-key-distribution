@@ -388,10 +388,12 @@ class loraWan:
                         logging.info(f"Key Found {broker_cfg['current_key']}")
                         logging.info(f"Key sent at {time.time()}")
                         self.send_deal(broker_cfg['current_key'].decode(), 100)
+                        return True
                 else:
                     logging.info(f"Device is out of range! ")
             except IOError as e:
                 logging.info(e)
+        return False
 
 
 # lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
