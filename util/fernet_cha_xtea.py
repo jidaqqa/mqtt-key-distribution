@@ -183,8 +183,8 @@ class FernetChaCha20Poly1305:
         self.key = key
 
     @classmethod
-    def generate_key(cls) -> bytes:
-        return base64.urlsafe_b64encode(os.urandom(32))
+    def generate_key(cls):
+        return os.urandom(32)
 
     def encrypt(self, data: typing.Union[str]):
         iv = os.urandom(12)

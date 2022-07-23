@@ -59,6 +59,7 @@ class ClientThread(threading.Thread):
         """
 
         try:
+            client_status = self._client_manager.get_client_status(self.client_socket, self.client_address)
             self._client_manager.add_status(self.client_socket, self.client_address, enums.Status.CONN_RECV)
             self._client_manager.add_user_property(self.client_socket, self.client_address, parsed_msg['properties'])
             self._client_manager.add_user_property(self.client_socket, self.client_address,
@@ -71,16 +72,17 @@ class ClientThread(threading.Thread):
 
             mode = self._mode_config['mode']
 
-            if mode == "BL":
-                hci_rssi.check_range(self._mode_config['min_power'])
+            if client_status is None:
+                if mode == "BL":
+                    hci_rssi.check_range(self._mode_config['min_power'])
 
-            elif mode == "WIFI":
-                rssi_value = float(parsed_msg['username'])
-                logging.info(f"Received WIFI RSSI: {rssi_value}")
+                elif mode == "WIFI":
+                    rssi_value = float(parsed_msg['username'])
+                    logging.info(f"Received WIFI RSSI: {rssi_value}")
 
-            elif mode == "LORA":
-                lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
-                lr.check_range(self._mode_config['min_power'])
+                elif mode == "LORA":
+                    lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
+                    lr.check_range(self._mode_config['min_power'])
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
             self.close()

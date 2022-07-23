@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import subprocess
 
 import rssi
@@ -194,8 +195,8 @@ async def main(args):
         if key_cfg['current_key'] != "":
             if mode == "BL":
                 bleClnt = bleClient()
-                bleClnt.start("0")
-                bleClnt.stop()
+                # bleClnt.start("0")
+                # bleClnt.stop()
             elif mode == "LORA":
                 lr.send_deal("0", 100)
             elif mode == "WIFI":
@@ -213,7 +214,7 @@ async def main(args):
             if mode == "BL":
                 bleClnt = bleClient()
                 bleClnt.start("1")
-                key_cfg['current_key'] = bleClnt.receive()
+                key_cfg['current_key'] = base64.urlsafe_b64decode(bleClnt.receive())
                 logging.info(f"Key received at {time.time()}")
                 logging.info(key_cfg["current_key"])
                 yml.write_yaml('client_key.yml', key_cfg)

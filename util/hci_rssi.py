@@ -1,3 +1,4 @@
+import base64
 import logging
 import subprocess
 import time
@@ -75,7 +76,7 @@ def check_range(min_power):
                 if bool(broker_cfg):
                     logging.info(f"Key Found {broker_cfg['current_key']}")
                     logging.info(f"Key sent at {time.time()}")
-                    bleSvr.sendData(broker_cfg['current_key'].encode())
+                    bleSvr.sendData(base64.urlsafe_b64encode(broker_cfg['current_key']))
             else:
                 logging.info(f"Device {clientInfo[0]} is out of range! ")
                 bleSvr.closeClientSocket()
