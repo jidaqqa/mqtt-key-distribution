@@ -71,14 +71,15 @@ class ClientThread(threading.Thread):
             logger.logging.info(f"Sent CONNACK to client {parsed_msg['client_id']}.")
 
             mode = self._mode_config['mode']
+
             add_to_received_list = False
-            client_list = None
 
-            with open('./client_with_keys.config', 'r') as f:
-                client_list = f.readlines()
-                f.close()
+            yml = YmalReader()
+            cl_list = yml.read_yaml("clients_with_keys.yml")
 
-            if self.client_address not in client_list:
+            logging.info(self.client_address[0])
+
+            if not bool(cl_list.get(self.client_address[0])):
                 if mode == "BL":
                     add_to_received_list = hci_rssi.check_range(self._mode_config['min_power'])
 
@@ -91,9 +92,8 @@ class ClientThread(threading.Thread):
                     add_to_received_list = lr.check_range(self._mode_config['min_power'])
 
             if add_to_received_list:
-                with open('./client_with_keys.config', 'a') as f:
-                    f.write(self.client_address)
-                    f.write("\n")
+                new_client = {self.client_address[0]: self.client_id}
+                yml.write_yaml("client_with_keys.yml", new_client)
 
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)
@@ -361,7 +361,7 @@ class Listener(object):
                           hours=self._kd_config['hours'],
                           minutes=self._kd_config['minutes'], seconds=self._kd_config['seconds'])
         logging.getLogger('apscheduler').setLevel(logging.WARN)
-        #scheduler.start()
+        # scheduler.start()
         while self._running:
             try:
                 client_socket, client_address = self.sock.accept()
