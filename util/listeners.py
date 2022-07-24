@@ -1,8 +1,7 @@
-import socket
 import threading
 import ssl
 from apscheduler.schedulers.background import BackgroundScheduler
-
+import socket
 from util import hci_rssi
 from util.mqtt_packet_manager import MQTTPacketManager
 import util.logger as logger
@@ -12,6 +11,7 @@ import util.enums as enums
 from util.yaml_config_rw import *
 from util.fernet_cha_xtea import *
 from util.lora_wan import loraWan
+import util.wifi_tech as wifi
 
 ALLOWED_CONNECTIONS = 10
 
@@ -82,8 +82,7 @@ class ClientThread(threading.Thread):
                     add_to_received_list = hci_rssi.check_range(self._mode_config['min_power'])
 
                 elif mode == "WIFI":
-                    rssi_value = float(parsed_msg['username'])
-                    logging.info(f"Received WIFI RSSI: {rssi_value}")
+                    wifi.check_range(self._mode_config['min_power'])
 
                 elif mode == "LORA":
                     lr = loraWan("/dev/ttyS0", 433, 100, 22, True)

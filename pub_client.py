@@ -12,7 +12,7 @@ from util.yaml_config_rw import YmalReader
 from util.fernet_cha_xtea import *
 from util.bleClient import *
 from util.lora_wan import loraWan
-import base64
+import socket
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 STOP = asyncio.Event()
@@ -143,7 +143,7 @@ async def main(args):
                 client.publish(args.topic, args.message + f" {i}", qos=0)
     else:
         lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
-        if key_cfg['current_key'] != "":
+        if key_cfg['current_key'] != "" or key_cfg['current_key'] != "null":
             # if mode == "BL":
             #     bleClnt = bleClient()
             #     bleClnt.start("0")
@@ -192,6 +192,20 @@ async def main(args):
                 key_cfg['current_key'] = data['payload']
                 logging.info(key_cfg["current_key"])
                 yml.write_yaml('client_key.yml', key_cfg)
+            elif mode == "WIFI":
+                output = subprocess.check_output(['iwgetid'])
+                interface = output.decode().split()[0]
+                APSSID = output.decode().split()[1]
+                rssi_scanner = rssi.RSSI_Scan(interface)
+                ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
+                logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
+                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client.connect(('192.168.0.101', 1883))
+                client.send(ap_info[0]['signal'])
+                from_server = client.recv(4096)
+                client.close()
+                logging.info(from_server)
+
     await STOP.wait()
     try:
         await client.disconnect(session_expiry_interval=0)

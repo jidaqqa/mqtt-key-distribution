@@ -27,3 +27,5 @@ mean_variance_high = meanValue + variance
 print(np.round_(mean_variance_low, 2))
 print(np.round_(mean_variance_high, 2))
 
+stdev = statistics.pstdev(rssi_values)
+print(stdev)
