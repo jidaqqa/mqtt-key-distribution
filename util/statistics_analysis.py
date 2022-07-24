@@ -2,7 +2,8 @@ import statistics
 import numpy as np
 
 # file_path = "./lora_rssi_1m"
-file_path = "./bl_rssi_1m"
+# file_path = "./bl_rssi_1m"
+file_path = "./wifi_rssi_1m"
 
 with open(file_path) as f:
     lines = f.readlines()

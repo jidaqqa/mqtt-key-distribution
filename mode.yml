@@ -6,7 +6,7 @@
 mode : "WIFI" # WIFI Mode
 key_renew_timing : '0/0/5/0' # Example days/hours/minutes/seconds
 encryption : 1 # 0=No Encryption, 1=Encryption Using Xtea, 2=Encryption Using ChaCha20Poly1305
-min_power: -40
+min_power: -37
 
 #mode : "LORA" # LORA Mode
 #key_renew_timing : '0/0/3/0' # Example days/hours/minutes/seconds

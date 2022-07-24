@@ -82,7 +82,7 @@ class ClientThread(threading.Thread):
                     add_to_received_list = hci_rssi.check_range(self._mode_config['min_power'])
 
                 elif mode == "WIFI":
-                    wifi.check_range(self._mode_config['min_power'])
+                    add_to_received_list = wifi.check_range(self._mode_config['min_power'])
 
                 elif mode == "LORA":
                     lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
@@ -90,7 +90,8 @@ class ClientThread(threading.Thread):
 
             if add_to_received_list:
                 new_client = {self.client_address[0]: self.client_id}
-                yml.write_yaml("clients_with_keys.yml", new_client)
+                cl_list.update(new_client)
+                yml.write_yaml("clients_with_keys.yml", cl_list)
 
         except (IncorrectProtocolOrderException, TypeError) as e:
             logger.logging.error(e)

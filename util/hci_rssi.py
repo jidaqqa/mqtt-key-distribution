@@ -62,25 +62,25 @@ def check_range(min_power):
     bleSvr = bleServer()
     bleSvr.start()
     clientInfo = bleSvr.acceptBluetoothConnection()
-    key_required = bleSvr.receive()
-    if key_required != "0":
-        current_rssi = get_rssi(clientInfo[0])
-        if current_rssi is not None:
-            logging.info("Current RSSI: " + str(current_rssi))
-            if current_rssi >= min_power:
-                yml = YmalReader()
-                broker_cfg = yml.read_yaml("broker_key.yml")
-                if bool(broker_cfg):
-                    logging.info(f"Key Found {broker_cfg['current_key']}")
-                    logging.info(f"Key sent at {time.time()}")
-                    bleSvr.sendData(base64.urlsafe_b64encode(broker_cfg['current_key']))
-                    bleSvr.stop()
-                    return True
-
-            else:
-                logging.info(f"Device {clientInfo[0]} is out of range! ")
-                bleSvr.closeClientSocket()
+    # key_required = bleSvr.receive()
+    # if key_required != "0":
+    current_rssi = get_rssi(clientInfo[0])
+    if current_rssi is not None:
+        logging.info("Current RSSI: " + str(current_rssi))
+        if current_rssi >= min_power:
+            yml = YmalReader()
+            broker_cfg = yml.read_yaml("broker_key.yml")
+            if bool(broker_cfg):
+                logging.info(f"Key Found {broker_cfg['current_key']}")
+                logging.info(f"Key sent at {time.time()}")
+                bleSvr.sendData(base64.urlsafe_b64encode(broker_cfg['current_key']))
                 bleSvr.stop()
+                return True
+
+        else:
+            logging.info(f"Device {clientInfo[0]} is out of range! ")
+            bleSvr.closeClientSocket()
+            bleSvr.stop()
     return False
 
 

@@ -206,12 +206,10 @@ async def main(args):
             #     rssi_scanner = rssi.RSSI_Scan(interface)
             #     ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
             #     logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
-            # logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
-            # client.subscribe(args.topic, qos=0, subscription_identifier=1)
             logging.info("Reading client key from failed or does not exist")
             if mode == "BL":
                 bleClnt = bleClient()
-                bleClnt.start("1")
+                bleClnt.start()
                 key_cfg['current_key'] = bleClnt.receive()
                 logging.info(f"Key received at {time.time()}")
                 logging.info(key_cfg["current_key"])
@@ -221,9 +219,30 @@ async def main(args):
                 lr.send_deal("1", 100)
                 data = lr.receive_data()
                 logging.info(f"Key received at {time.time()}")
+                #if mode_cfg['encryption'] == 1:
                 key_cfg['current_key'] = data['payload']
                 logging.info(key_cfg["current_key"])
                 yml.write_yaml('client_key.yml', key_cfg)
+            elif mode == "WIFI":
+                output = subprocess.check_output(['iwgetid'])
+                interface = output.decode().split()[0]
+                APSSID = output.decode().split()[1]
+                rssi_scanner = rssi.RSSI_Scan(interface)
+                if rssi_scanner.getAPinfo([APSSID.split('"')[1]]):
+                    ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
+                key_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                key_socket.connect(('192.168.0.100', 1884))
+                if bool(ap_info[0]['signal']):
+                    rssi_value = str(ap_info[0]['signal'])
+                    key_socket.send(bytes(rssi_value.encode()))
+                    from_server = key_socket.recv(4096)
+                    logging.info(f"Key Received at {time.time()}")
+                    logging.info(from_server)
+                else:
+                    logging.info("Re-connect!")
+                key_socket.close()
+            logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
+            client.subscribe(args.topic, qos=0, subscription_identifier=1)
 
     await STOP.wait()
     try:

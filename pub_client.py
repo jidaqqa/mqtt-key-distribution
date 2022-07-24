@@ -178,7 +178,7 @@ async def main(args):
             logging.info("Reading client key from failed or does not exist")
             if mode == "BL":
                 bleClnt = bleClient()
-                bleClnt.start("1")
+                bleClnt.start()
                 key_cfg['current_key'] = bleClnt.receive()
                 logging.info(f"Key received at {time.time()}")
                 logging.info(key_cfg["current_key"])
@@ -197,7 +197,8 @@ async def main(args):
                 interface = output.decode().split()[0]
                 APSSID = output.decode().split()[1]
                 rssi_scanner = rssi.RSSI_Scan(interface)
-                ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
+                if rssi_scanner.getAPinfo([APSSID.split('"')[1]]):
+                    ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
                 key_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 key_socket.connect(('192.168.0.100', 1884))
                 if bool(ap_info[0]['signal']):

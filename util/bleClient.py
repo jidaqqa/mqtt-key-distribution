@@ -83,7 +83,7 @@ class bleClient:
         except (Exception, BluetoothError, SystemExit, KeyboardInterrupt) as e:
             logging.error("Failed to close the bluetooth client socket ", exc_info=True)
 
-    def start(self, msg):
+    def start(self):
         # Search for the MQTT-Broker Bluetooth service
         self.getBluetoothServices()
         # Create the client socket
@@ -91,7 +91,7 @@ class bleClient:
         # Connect to bluetooth service
         self.getBluetoothConnection()
         # Send the identifier that request a key
-        self.sendData(msg)
+        # self.sendData(msg)
 
     def receive(self):
         # receive data
