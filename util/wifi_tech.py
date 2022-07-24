@@ -16,7 +16,7 @@ def check_range(min_power):
             data = conn.recv(4096)
             if not data: break
             from_client += str(data.decode())
-            logging.info(f"Key received at {time.time()}")
+            logging.info(f"Key Sent at {time.time()}")
             if from_client != '' and int(from_client) >= min_power:
                 yml = YmalReader()
                 broker_cfg = yml.read_yaml("broker_key.yml")

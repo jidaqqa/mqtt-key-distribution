@@ -198,16 +198,17 @@ async def main(args):
                 APSSID = output.decode().split()[1]
                 rssi_scanner = rssi.RSSI_Scan(interface)
                 ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
-                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                client.connect(('192.168.0.100', 1884))
+                key_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                key_socket.connect(('192.168.0.100', 1884))
                 if bool(ap_info[0]['signal']):
                     rssi_value = str(ap_info[0]['signal'])
-                    client.send(bytes(rssi_value.encode()))
-                    from_server = client.recv(4096)
+                    key_socket.send(bytes(rssi_value.encode()))
+                    from_server = key_socket.recv(4096)
+                    logging.info(f"Key Received at {time.time()}")
                     logging.info(from_server)
                 else:
                     logging.info("Re-connect!")
-                client.close()
+                key_socket.close()
 
     await STOP.wait()
     try:
