@@ -143,7 +143,7 @@ async def main(args):
                 client.publish(args.topic, args.message + f" {i}", qos=0)
     else:
         lr = loraWan("/dev/ttyS0", 433, 100, 22, True)
-        if key_cfg['current_key'] != "" or key_cfg['current_key'] != "null":
+        if key_cfg['current_key'] != "":
             # if mode == "BL":
             #     bleClnt = bleClient()
             #     bleClnt.start("0")
@@ -198,13 +198,16 @@ async def main(args):
                 APSSID = output.decode().split()[1]
                 rssi_scanner = rssi.RSSI_Scan(interface)
                 ap_info = rssi_scanner.getAPinfo([APSSID.split('"')[1]])
-                logging.info(f"WiFi Signal: {ap_info[0]['signal']}")
                 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                client.connect(('192.168.0.101', 1883))
-                client.send(ap_info[0]['signal'])
-                from_server = client.recv(4096)
+                client.connect(('192.168.0.100', 1884))
+                if bool(ap_info[0]['signal']):
+                    rssi_value = str(ap_info[0]['signal'])
+                    client.send(bytes(rssi_value.encode()))
+                    from_server = client.recv(4096)
+                    logging.info(from_server)
+                else:
+                    logging.info("Re-connect!")
                 client.close()
-                logging.info(from_server)
 
     await STOP.wait()
     try:
