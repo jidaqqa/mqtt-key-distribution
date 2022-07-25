@@ -1,8 +1,3 @@
-# This file is dual licensed under the terms of the Apache License, Version
-# 2.0, and the BSD License. See the LICENSE file in the root of this repository
-# for complete details.
-
-
 import base64
 import binascii
 import os
@@ -183,7 +178,7 @@ class FernetChaCha20Poly1305:
         self.key = key
 
     @classmethod
-    def generate_key(cls):
+    def generate_key(cls) -> bytes:
         return os.urandom(32)
 
     def encrypt(self, data: typing.Union[str]):
@@ -191,14 +186,13 @@ class FernetChaCha20Poly1305:
         encryptor = ChaCha20Poly1305(self.key)
         ciphertext = encryptor.encrypt(iv, bytes(data.encode()))
         message_parts = (
-                b"\x80"
-                + iv
+                iv
                 + ciphertext
         )
         return message_parts
 
     def decrypt(self, data: typing.Union[bytes]):
-        iv = data[1:13]
+        iv = data[0:12]
         data_bytes = data[13:len(data)]
         decryptor = ChaCha20Poly1305(self.key)
         plaintext = decryptor.decrypt(iv, data_bytes)

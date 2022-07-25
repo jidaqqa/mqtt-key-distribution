@@ -1,9 +1,8 @@
 import asyncio
 import base64
+import logging
 import subprocess
-
 import rssi
-
 from util.gmqtt.client import Client as MQTTClient
 import argparse
 import random
@@ -242,7 +241,7 @@ async def main(args):
                     logging.info("Re-connect!")
                 key_socket.close()
             logging.info(f"Subscribing to '{args.topic}', without Multilateral Security")
-            client.subscribe(args.topic, qos=0, subscription_identifier=1)
+        client.subscribe(args.topic, qos=0, subscription_identifier=1)
 
     await STOP.wait()
     try:
@@ -254,7 +253,7 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
     warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-    HOSTNAME = "172.18.0.103"
+    HOSTNAME = "172.18.0.101"
     PORT = 1883
     CLIENT_ID = str(random.randint(0,50000))
 
